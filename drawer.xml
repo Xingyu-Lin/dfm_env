@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mujoco>
+    <compiler angle="radian" meshdir="meshes" />
+    <option gravity="0 0 -9.81" integrator="RK4" />
+  <option timestep="0.002">
+    <flag warmstart="enable"></flag>
+  </option>
+
+    <include file="sawyer.xml"/>
+<!--  ================= Visual Elements ================= /-->
+    <asset>
+        <material name='MatGnd' specular='.3' shininess='.3' reflectance='0.3' rgba='.5 .55 .5 1'/>
+    </asset>
+
+    <!--  ================= Physical Properties ================= /-->
+    <default>
+        <geom solref='0.01 1' solimp='0.95 0.95 0.01' condim='4'/>
+
+        <default class='table'>
+            <geom material='MatGnd' rgba='.6 .6 .5 1' solref='0.01 1' solimp='0.95 0.98 0.001' contype='1' condim='1'
+                  conaffinity='1'/>
+        </default>
+
+        <default class='obstacle'>
+            <geom material='MatGnd' rgba='.7 .4 .2 1' solref='0.01 1' solimp='0.95 0.98 0.001' contype='1' condim='1'
+                  conaffinity='1'/>
+        </default>
+
+        <default class='object'>
+            <geom rgba='0.4 0.5 0.9 1' solmix='0' density='400'/>
+        </default>
+    </default>
+
+
+    <!--  ================= Kinematic Tree ================= /-->
+    <worldbody>
+        <light directional='true' cutoff='40' exponent='10' diffuse='.4 .4 .4' specular='.7 .7 .7' pos='0.9 0 1.5'
+               dir='0 0 -1'/>
+
+        <!--  ================= Table ================= /-->
+        <geom name='tableTop' material='MatGnd' type='plane' pos='0.6 0 0' size='0.4 0.6 0.5' class='table'/>
+
+        <body name='shift'>
+            <!--  ================= Obstacle ================= /-->
+            <body name='frame' pos='1 0 0' quat='1 0 0 0'>
+                <geom type='box' class='obstacle' size='0.01 0.01 0.15' pos='0 0.16 0.15'/>
+                <geom type='box' class='obstacle' size='0.01 0.01 0.15' pos='0 -0.16 0.15'/>
+                <geom type='box' class='obstacle' size='0.01 0.17 0.01' pos='0 0 0.31'/>
+                <geom type='box' class='obstacle' size='0.01 0.17 0.01' pos='0.02 0 0.01'/>
+                <geom type='box' class='obstacle' size='0.01 0.05 0.01' pos='-0.03 0 0.31'/>
+                <geom type='box' class='obstacle' size='0.005 0.01 0.01' pos='-0.015 0.04 0.31'/>
+                <geom type='box' class='obstacle' size='0.005 0.01 0.01' pos='-0.015 -0.04 0.31'/>
+                <body name='door' pos='0 0 0' quat='1 0 0 0'>
+                    <joint type='slide' pos='0 0 0' axis='1 0 0'/>
+                    <!--<joint pos='0 -0.13 0' axis='0 0 1' limited='false' stiffness='0.01' springref='-0.785'/>-->
+                    <geom type='box' class='obstacle' size='0.01 0.14 0.148' pos='0 0 0.15'/>
+                    <geom type='box' class='obstacle' size='0.1 0.01 0.128' pos='0.1 0.13 0.15'/>
+                    <geom type='box' class='obstacle' size='0.1 0.01 0.128' pos='0.1 -0.13 0.15'/>
+
+                    <!--  ================= Object ================= /-->
+                    <body name='object' pos='0 0 0.25' quat='1 0 0 0'>
+                        <!--<joint pos='0 0 0' axis='1 0 0' limited='false' springdamper='0.001 2' springref='0.785'/>-->
+                        <joint type='slide' axis='0 0 1' range='-0.05 0' springdamper='0.008 3' limited='true'/>
+                        <geom type='cylinder' size='0.014' fromto='0 0 0 -0.05 0 0' class='object'/>
+                        <geom name='bolt' type='box' size='0.0049 0.02 0.045' pos='-0.015 0 0.03' class='object'/>
+                        <geom type='capsule' size='0.014' fromto='-0.05 -0.05 0 -0.05 0.05 0' class='object'/>
+                    </body>
+                </body>
+            </body>
+
+        </body>
+    </worldbody>
+
+</mujoco>
