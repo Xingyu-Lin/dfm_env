@@ -57,10 +57,10 @@
 
 	<!--  ================= Kinematic Tree ================= /-->
     <worldbody>
-        <light directional='true' cutoff='40' exponent='10' diffuse='.4 .4 .4' specular='.7 .7 .7' pos='0.9 0 1.5' dir='0 0 -1'/>
+        <light directional='true' cutoff='40' exponent='10' diffuse='.4 .4 .4' specular='.7 .7 .7' pos='0.9 0 1.5' dir='0 0 -1' castshadow="false"/>
 
 		<!--  ================= Base ================= /-->
-        <body name='base' pos='0 0 0' childclass='arm'>
+        <body name='base' quat='0.5 0 0 -0.5' pos='0 1 0.93' childclass='arm'>
             <inertial pos='0 0 0' mass='0' diaginertia='0 0 0' />
             <body name='controller_box' pos='0 0 0'>
                 <inertial pos='-0.325 0 -0.38' mass='46.64' diaginertia='1.71363 1.27988 0.809981' />

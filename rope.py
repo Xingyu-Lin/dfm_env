@@ -30,10 +30,11 @@ from dm_control.utils import containers
 from dm_control.utils import rewards
 import numpy as np
 
-_DEFAULT_TIME_LIMIT = 5
+_DEFAULT_TIME_LIMIT = 500
 
 from dm_control.utils import io as resources
 import os
+
 
 def read_model(model_filename):
     """Reads a model XML file and returns its contents as a string."""
@@ -46,9 +47,12 @@ def get_model_and_assets():
 
 
 from dm_control.mujoco import Physics
+
+
 def rope_env(time_limit=_DEFAULT_TIME_LIMIT, random=None,
              environment_kwargs=None):
-    """Returns pendulum swingup task ."""
+    """Returns rope manipulation task."""
+
     physics = Physics.from_xml_string(*get_model_and_assets())
     task = SwingUp(random=random)
     environment_kwargs = environment_kwargs or {}
@@ -122,4 +126,5 @@ class SwingUp(base.Task):
 
 if __name__ == '__main__':
     env = rope_env()
+    env.physics.named.data.qpos['arm_j6'] = 0.5
     viewer.launch(env)

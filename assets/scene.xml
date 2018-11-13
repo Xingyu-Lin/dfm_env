@@ -30,16 +30,19 @@
         <material name="matcarpet" texture="texcarpet"/>
         <material name="matsponge" texture="texsponge" specular="0.3"/>
         <material name="matmarble" texture="texmarble" rgba=".7 .7 .7 1"/>
+        <material name='MatGnd' specular='.3' shininess='.3' reflectance='0.3' rgba='.2 .2 .2 1'/>
     </asset>
 
     <worldbody>
         <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="false"/>
-        <light directional="true" diffuse=".6 .6 .6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1"/>
+        <light directional="true" diffuse=".6 .6 .6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1"  castshadow="false" />
+
+        <geom name='tableTop' material='MatGnd' type='plane' pos='0 0 0.9' size='0.8 0.6 0.4' />
 
         <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1"/>
 
-        <body mocap="true" pos="-.1 .05 0" zaxis=".5 0 1">
-            <geom type="capsule" size=".1 .1" material="matmarble" group="1" condim="1"/>
-        </body>
+        <!--<body mocap="true" pos="-.1 .05 0" zaxis=".5 0 1">-->
+            <!--<geom type="capsule" size=".1 .1" material="matmarble" group="1" condim="1"/>-->
+        <!--</body>-->
     </worldbody>
 </mujoco>

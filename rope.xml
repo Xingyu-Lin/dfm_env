@@ -1,14 +1,21 @@
 <mujoco>
-<include file="./assets/scene.xml"/>
-<worldbody>
+    <compiler angle="radian" meshdir="meshes"/>
+    <!--<option gravity="0 0 -9.81" integrator="RK4"/>-->
+    <option timestep="0.002">
+        <flag warmstart="enable"></flag>
+    </option>
 
-<body name="B10" pos="0 0 1">
-    <freejoint/>
-    <composite type="rope" count="21 1 1" spacing="0.04" offset="0 0 2">
-        <joint kind="main" damping="0.005"/>
-        <geom type="capsule" size=".01 .02" rgba=".8 .2 .1 1"/>
-    </composite>
-</body>
+    <include file="./assets/scene.xml"/>
+    <include file="./sawyer.xml"/>
+    <worldbody>
 
-</worldbody>
+        <body name="B10" pos="0 0 0.92">
+            <freejoint/>
+            <composite type="rope" count="21 1 1" spacing="0.04" offset="0 0 2">
+                <joint kind="main" damping="0.005"/>
+                <geom type="capsule" size=".01 .015" rgba=".8 .2 .1 1"/>
+            </composite>
+        </body>
+
+    </worldbody>
 </mujoco>
