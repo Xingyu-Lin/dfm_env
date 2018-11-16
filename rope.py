@@ -29,7 +29,7 @@ from dm_control.suite import common
 from dm_control.utils import containers
 from dm_control.utils import rewards
 import numpy as np
-
+import cv2
 _DEFAULT_TIME_LIMIT = 500
 
 from dm_control.utils import io as resources
@@ -98,6 +98,7 @@ class SwingUp(base.Task):
           physics: An instance of `Physics`.
 
         """
+        physics.named.data.qpos['arm_j6'] = self.random.uniform(-0.5, 0.5)
         return
         physics.named.data.qpos['hinge'] = self.random.uniform(-np.pi, np.pi)
 
@@ -123,8 +124,32 @@ class SwingUp(base.Task):
         return 0
         return rewards.tolerance(physics.pole_vertical(), (_COSINE_BOUND, 1))
 
+def random_policy(time_step=None):
+  del time_step  # Unused.
+  #print(env.action_spec().minimum,env.action_spec().maximum,env.action_spec().shape)
+  lo = np.zeros((8,1))
+  hig = np.zeros((8,1))
+  return np.random.uniform(low=lo,
+                           high=hig,
+                           size=(8,1))
 
 if __name__ == '__main__':
     env = rope_env()
     env.physics.named.data.qpos['arm_j6'] = 0.5
-    viewer.launch(env)
+    #viewer.launch(env)
+    print(dir(env.physics))
+    input("---------")
+    while True:
+        action = random_policy()
+        #print(env.physics.data.ctrl)
+        env.physics.data.ctrl[:] = action.squeeze()
+        env.physics.step()
+        #print(env.physics.named.data.xpos)
+        #print(env.physics.named.data.qpos)
+        pixels = env.physics.render(height=480, width=500)
+        pixels = pixels/255.0
+        pixels = pixels[:,:,::-1]#BGR to RGB
+        
+        cv2.imshow('display',pixels)
+        cv2.waitKey(100)
+    
