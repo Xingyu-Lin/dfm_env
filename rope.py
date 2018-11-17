@@ -138,18 +138,31 @@ if __name__ == '__main__':
     env.physics.named.data.qpos['arm_j6'] = 0.5
     #viewer.launch(env)
     print(dir(env.physics))
-    input("---------")
+    #input("---------")
     while True:
         action = random_policy()
         #print(env.physics.data.ctrl)
         env.physics.data.ctrl[:] = action.squeeze()
         env.physics.step()
+        print(dir(env.physics.model))
+        li = env.physics.named.data.ctrl.axes.row.names
+        arm_inds = [idx for idx, s in enumerate(li) if 'tj' in s]
+        gripper_inds = [idx for idx, s in enumerate(li) if 'tg' in s]
+        print(arm_inds)
+        print(gripper_inds)
+        print(len(env.physics.model.body_pos))
+        print(env.physics.named.data.qpos)
+        env.physics.model.body_pos[gripper_inds[0]: gripper_inds[0] +3] = [0.1 , 0.2 , 0.1]
+        env.physics.forward()
+        print(env.physics.model.body_pos[gripper_inds, :])
+        #print(env.physics.data.xpos)
+        #print(env.physics.named.data.qvel)
         #print(env.physics.named.data.xpos)
         #print(env.physics.named.data.qpos)
-        pixels = env.physics.render(height=480, width=500)
+        pixels = env.physics.render(height=480, width=500, camera_id = 0)
         pixels = pixels/255.0
         pixels = pixels[:,:,::-1]#BGR to RGB
         
         cv2.imshow('display',pixels)
         cv2.waitKey(100)
-    
+        input("---------")

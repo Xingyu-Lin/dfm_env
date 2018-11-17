@@ -20,7 +20,6 @@ if __name__ == '__main__':
         pixels, _, _, _ = env.step(action)
         print(pixels)
         pixels = pixels['observation']
-        pixels = env.physics.render(height=480, width=500)
         pixels = pixels / 255.0
         pixels = pixels[:, :, ::-1]  # BGR to RGB
         cv2.imshow('display', pixels)
