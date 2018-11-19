@@ -3,10 +3,11 @@ import gym
 import numpy as np
 
 from base import Base
-
+from dm_control import mujoco
+from dm_control.suite import base
 
 class RopeEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=10,
+    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
                  horizon=50, image_size=400, action_type='torque',
                  with_goal=False,
                  use_visual_observation=True,
@@ -39,11 +40,17 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
         gym.utils.EzPickle.__init__(self)
 
+        # self.configure_indexes()
     # Implementation of functions from GoalEnvExt
     # ----------------------------
 
     def _reset_sim(self):
         # Sample goal and render image
+
+        # with self.physics.reset_context():
+            # physics.data.qpos[:] =
+            # physics.data.qvel[:] =
+            # physics.data.ctrl[:] =
 
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
         # self.set_state(qpos, qvel=self.init_qvel)
@@ -116,5 +123,23 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # def set_hidden_goal(self):
     #     self.sim.model.geom_rgba[9, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
 
+
     # Env specific helper functions
     # ----------------------------
+    def configure_indexes(self):
+
+        list_joints = self.physics.named.data.ctrl.axes.row.names
+        self.arm_inds = [idx for idx, s in enumerate(list_joints) if 'tj' in s]
+        self.gripper_inds = [idx for idx, s in enumerate(list_joints) if 'tg' in s]
+
+    # def action_spec(self):
+    #     """Returns a `BoundedArraySpec` matching the `physics` actuators."""
+    #     return mujoco.action_spec(self.physics)
+    #
+    # def get_observation(self):
+    #     pass
+    #
+    # def get_reward(self):
+    #     pass
+    # def initialize_episode(self, physics):
+    #     pass

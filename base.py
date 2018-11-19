@@ -14,9 +14,32 @@ from dm_control.suite import common
 from dm_control.mujoco import Physics
 from dm_control.utils import io as resources
 
-
 import cv2 as cv
 import copy
+
+init_qpos = {
+    'arm_j0': 0.,
+    'arm_j1': 0.,
+    'arm_j2': 0.,
+    'arm_j3': 0.,
+    'arm_j4': 0.,
+    'arm_j5': 0.,
+    'arm_j6': 0.,
+    'gripper_jl': 0.,
+    'gripper_jr': 0.,
+}
+
+init_qvel = {
+    'arm_j0': 0.,
+    'arm_j1': 0.,
+    'arm_j2': 0.,
+    'arm_j3': 0.,
+    'arm_j4': 0.,
+    'arm_j5': 0.,
+    'arm_j6': 0.,
+    'gripper_jl': 0.,
+    'gripper_jr': 0.,
+}
 
 
 class Base(GoalEnv):
@@ -24,6 +47,7 @@ class Base(GoalEnv):
     Base class for all dm_control based, goal oriented environments.
     Suppport different auxiliary tasks
     '''
+
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
@@ -42,7 +66,7 @@ class Base(GoalEnv):
         self._env_setup(initial_qpos=initial_qpos)
         # TODO
         # self.initial_state = copy.deepcopy(self.sim.get_state())
-
+        self.n_substeps = n_substeps
         self.horizon = horizon
         self.image_size = image_size
         self.use_image_goal = use_image_goal
@@ -63,7 +87,7 @@ class Base(GoalEnv):
         self.goal_state = self.goal_observation = None
 
         if (not use_visual_observation and distance_threshold == 0. and not use_true_reward) or (
-                  use_visual_observation and distance_threshold_obs == 0. and not use_true_reward):
+          use_visual_observation and distance_threshold_obs == 0. and not use_true_reward):
             self.compute_reward = self.compute_reward_zero
 
         self.default_camera_name = default_camera_name
@@ -239,7 +263,8 @@ class Base(GoalEnv):
         if self.use_auxiliary_rewards:
             prev_frame = self.render()
             self._set_action(action)
-            self.physics.step()
+            for _ in range(self.n_substeps):
+                self.physics.step()
             self._step_callback()
             obs = self._get_obs()
             next_frame = self.render()
@@ -253,7 +278,8 @@ class Base(GoalEnv):
             }
         else:
             self._set_action(action)
-            self.physics.step()
+            for _ in range(self.n_substeps):
+                self.physics.step()
             self._step_callback()
             obs = self._get_obs()
             aug_info = {}
