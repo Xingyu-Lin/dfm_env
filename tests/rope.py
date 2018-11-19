@@ -30,6 +30,7 @@ from dm_control.utils import containers
 from dm_control.utils import rewards
 import numpy as np
 import cv2
+
 _DEFAULT_TIME_LIMIT = 500
 
 from dm_control.utils import io as resources
@@ -124,24 +125,26 @@ class SwingUp(base.Task):
         return 0
         return rewards.tolerance(physics.pole_vertical(), (_COSINE_BOUND, 1))
 
+
 def random_policy(time_step=None):
-  del time_step  # Unused.
-  #print(env.action_spec().minimum,env.action_spec().maximum,env.action_spec().shape)
-  lo = np.zeros((8,1))
-  hig = np.zeros((8,1))
-  return np.random.uniform(low=lo,
-                           high=hig,
-                           size=(8,1))
+    del time_step  # Unused.
+    # print(env.action_spec().minimum,env.action_spec().maximum,env.action_spec().shape)
+    lo = np.zeros((8, 1))
+    hig = np.zeros((8, 1))
+    return np.random.uniform(low=lo,
+                             high=hig,
+                             size=(8, 1))
+
 
 if __name__ == '__main__':
     env = rope_env()
     env.physics.named.data.qpos['arm_j6'] = 0.5
-    #viewer.launch(env)
+    # viewer.launch(env)
     print(dir(env.physics))
-    #input("---------")
+    # input("---------")
     while True:
         action = random_policy()
-        #print(env.physics.data.ctrl)
+        # print(env.physics.data.ctrl)
         env.physics.data.ctrl[:] = action.squeeze()
         env.physics.step()
         print(dir(env.physics.model))
@@ -152,17 +155,17 @@ if __name__ == '__main__':
         print(gripper_inds)
         print(len(env.physics.model.body_pos))
         print(env.physics.named.data.qpos)
-        env.physics.model.body_pos[gripper_inds[0]: gripper_inds[0] +3] = [0.1 , 0.2 , 0.1]
+        env.physics.model.body_pos[gripper_inds[0]: gripper_inds[0] + 3] = [0.1, 0.2, 0.1]
         env.physics.forward()
         print(env.physics.model.body_pos[gripper_inds, :])
-        #print(env.physics.data.xpos)
-        #print(env.physics.named.data.qvel)
-        #print(env.physics.named.data.xpos)
-        #print(env.physics.named.data.qpos)
-        pixels = env.physics.render(height=480, width=500, camera_id = 0)
-        pixels = pixels/255.0
-        pixels = pixels[:,:,::-1]#BGR to RGB
-        
-        cv2.imshow('display',pixels)
+        # print(env.physics.data.xpos)
+        # print(env.physics.named.data.qvel)
+        # print(env.physics.named.data.xpos)
+        # print(env.physics.named.data.qpos)
+        pixels = env.physics.render(height=480, width=500, camera_id=0)
+        pixels = pixels / 255.0
+        pixels = pixels[:, :, ::-1]  # BGR to RGB
+
+        cv2.imshow('display', pixels)
         cv2.waitKey(100)
         input("---------")

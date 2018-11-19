@@ -5,8 +5,8 @@
         <flag warmstart="enable"></flag>
     </option>
 
-    <include file="./assets/scene.xml"/>
-    <include file="./sawyer.xml"/>
+    <include file="./assets/scenes/scene.xml"/>
+    <include file="./assets/robots/sawyer.xml"/>
     <worldbody>
 
         <body name="B10" pos="0 0 0.92">

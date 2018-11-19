@@ -1,109 +1,82 @@
-
-import collections
-
-from dm_control import mujoco, viewer
-from dm_control.rl import control
-from dm_control.suite import base
-from dm_control.suite import common
-from dm_control.utils import containers
-from dm_control.utils import rewards
+# Created by Xingyu Lin, 2018/11/18                                                                                  
+import gym
 import numpy as np
-import cv2
-from os import path
-import math
-import os
-from gym import Env, GoalEnv
-from dm_control.mujoco import Physics
-from gym import spaces
-from dm_control.utils import io as resources
 
-class RopeEnv(GoalEnv):
-    def __init__(self, model_path='rope.xml', distance_threshold=5e-2, frame_skip=2,
-                 horizon=100, goal_range=[-0.16, 0.16], image_size=400, action_type='torque', obs_type='image', camera_name = 'static_camera', use_dof = 'both'):
+from base import Base
 
-        if model_path.startswith("/"):
-            fullpath = model_path
-        else:
-            fullpath = os.path.join(os.path.dirname(__file__), model_path)
-        if not path.exists(fullpath):
-            raise IOError("File %s does not exist" % fullpath)
 
-        self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
-        self.np_random = None
-        self.camera_name = camera_name
-        self.data = self.physics.data
-        self.viewer = None
-        self.distance_threshold = distance_threshold
-        self.frame_skip = frame_skip
-        self.reward_type = 'sparse'
-        self.horizon = horizon
-        self.obs_type = obs_type
-        self._max_episode_steps = horizon
+class RopeEnv(Base, gym.utils.EzPickle):
+    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=10,
+                 horizon=50, image_size=400, action_type='torque',
+                 with_goal=False,
+                 use_visual_observation=True,
+                 use_image_goal=True,
+                 use_true_reward=False, use_dof='both'):
+        '''
+
+        :param model_path:
+        :param distance_threshold:
+        :param distance_threshold_obs:
+        :param n_substeps:
+        :param horizon:
+        :param image_size:
+        :param action_type:
+        :param with_goal:
+        :param use_visual_observation:
+        :param use_image_goal:
+        :param use_true_reward:
+        :param use_dof: ['both', 'arm', 'gripper']
+        Base class for sawyer manipulation environments
+        '''
+        # TODO change n_action to be dependent on action_type
         self.use_dof = use_dof
-        self.time_step = 0
-        self.image_size = image_size
         self.action_type = action_type
-        self.goal_range = goal_range
-        self.configure_indexes()
 
-        if self.use_dof == 'both':
-            self.action_length = mujoco.action_spec(self.physics).shape[0]
-        elif self.use_dof == 'arm':
-            self.action_length = len(self.arm_inds)
+        Base.__init__(self, model_path=model_path, n_substeps=n_substeps, horizon=horizon, image_size=image_size,
+                      use_image_goal=use_image_goal, use_visual_observation=use_visual_observation,
+                      with_goal=with_goal, reward_type='sparse', distance_threshold=distance_threshold,
+                      distance_threshold_obs=distance_threshold_obs, use_true_reward=use_true_reward, n_actions=8)
+
+        gym.utils.EzPickle.__init__(self)
+
+    # Implementation of functions from GoalEnvExt
+    # ----------------------------
+
+    def _reset_sim(self):
+        # Sample goal and render image
+
+        # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
+        # self.set_state(qpos, qvel=self.init_qvel)
+        # self.goal_state = self.get_end_effector_location()
+        #
+        # qpos[-2:] = self.goal_state
+        # qvel = self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
+        # qvel[-2:] = 0
+        # self.set_state(qpos, qvel)
+        # self.goal_observation = self.render(mode='rgb_array', depth=False)
+        # qpos = self.np_random.uniform(low=-0.1, high=0.1, size=self.model.nq) + self.init_qpos
+        # qpos[-2:] = self.goal_state
+        # qvel = self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
+        # qvel[-2:] = 0
+        # self.set_state(qpos, qvel)
+
+        return True
+
+    def _get_obs(self):
+        if self.use_visual_observation:
+            obs = self.render(depth=False)
         else:
-            self.action_length = len(self.gripper_inds)
+            # TODO
+            obs = np.concatenate((self.physics.data.qpos.copy(), self.physics.data.qvel.copy()), axis=0)
 
-        obs = self.reset()
-        self.action_space = spaces.Box(-np.inf, np.inf, shape= (self.action_length,), dtype='float32')
-        self.observation_space = spaces.Dict(dict(
-            desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
-            achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
-            observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
-        ))
-        self.goal_dim = np.prod(obs['achieved_goal'].shape)
-
-    def read_model(self,model_filename):
-
-        """Reads a model XML file and returns its contents as a string."""
-        return resources.GetResource(model_filename)
-
-    def get_model_and_assets(self,model_filename):
-
-        """Returns a tuple containing the model XML string and a dict of assets."""
-        return self.read_model(model_filename = model_filename), common.ASSETS
-
-    def configure_indexes(self):
-
-        list_joints = self.physics.named.data.ctrl.axes.row.names
-        self.arm_inds = [idx for idx, s in enumerate(list_joints) if 'tj' in s]
-        self.gripper_inds = [idx for idx, s in enumerate(list_joints) if 'tg' in s]
-
-    def set_camera_location(self, camera_id=None, pos=[0.0, 0.0, 0.0]):
-        self.physics.model.cam_pos[camera_id] = pos
-
-    def set_camera_fov(self, camera_id=None, fovy=50.0):
-        self.physics.model.cam_fovy[camera_id] = fovy
-
-    def set_camera_orientation(self, camera_id=None, orientation_quat=[0., 0., 0., 0.]):
-        self.physics.model.cam_quat[camera_id] = orientation_quat
-
-    def reset(self):
-
-        self.time_step = 0
-        #with self.physics.reset_context()
-        #TODO : reset gripper location here
-        self.physics.forward()
-        return self.get_current_observation()
-
-    def get_current_observation(self):
-
-        if self.obs_type == 'image':
-            obs = self.physics.render(height=self.image_size, width=self.image_size, camera_id= self.camera_name)
-        else:
-            obs = np.concatenate((self.physics.data.qpos.copy(), self.physics.data.qvel.copy()), axis = 0)
-
-        desired_goal = self.get_fake_goal_location()
-        achieved_goal = self.get_fake_goal_location()
+        # TODO Figure out how to specify goal
+        desired_goal = achieved_goal = np.zeros(5)
+        # if self.use_image_goal:
+        #     desired_goal = self.goal_observation
+        #     achieved_goal = obs
+        # else:
+        #     desired_goal = self.get_goal_location()
+        #     achieved_goal = self.get_end_effector_location()
 
         return {
             'observation': obs.copy(),
@@ -111,19 +84,24 @@ class RopeEnv(GoalEnv):
             'desired_goal': desired_goal.copy()
         }
 
-    def get_fake_goal_location(self):
-        return np.zeros(5)
+    # def get_current_info(self):
+    #     """
+    #     :return: The true current state, 'ag_state', and goal state, 'g_state'
+    #     """
+    #     info = {
+    #         'ag_state': self.get_end_effector_location().copy(),
+    #         'g_state': self.get_goal_location().copy()
+    #     }
+    #     return info
 
-    def set_control(self, ctrl):
-
-        assert len(ctrl) == self.action_length, "Action vector not of right length"
+    def _set_action(self, ctrl):
         if self.action_type == 'torque':
             if self.use_dof == 'both':
                 self.physics.data.ctrl[:] = ctrl
             elif self.use_dof == 'arm':
                 self.physics.data.ctrl[self.arm_inds] = ctrl
             else:
-                self.physics.data.ctrl[self.gripper_inds] = ctrl+1
+                self.physics.data.ctrl[self.gripper_inds] = ctrl + 1
         else:
             self.physics.data.ctrl[:] = 0
             if self.use_dof == 'both':
@@ -133,19 +111,10 @@ class RopeEnv(GoalEnv):
             else:
                 self.physics.data.qvel[self.gripper_inds] = ctrl
 
-    def step(self, ctrl):
+    def get_current_info(self):
+        return {}
+    # def set_hidden_goal(self):
+    #     self.sim.model.geom_rgba[9, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
 
-        ctrl = np.clip(ctrl, -np.inf, np.inf)
-        self.set_control(ctrl)
-        for _ in range(self.frame_skip):
-            self.physics.step()
-        self.time_step += 1
-        obs = self.get_current_observation()
-        reward = 0.0
-        done = False
-        if self.time_step >= self.horizon:
-            done = True
-        info = {}
-        return obs, reward, done, info
-
-
+    # Env specific helper functions
+    # ----------------------------
