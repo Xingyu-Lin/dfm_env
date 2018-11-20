@@ -36,7 +36,7 @@ class Base(GoalEnv):
             raise IOError("File %s does not exist" % fullpath)
 
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
-        self.n_actions = n_actionsq
+        self.n_actions = n_actions
         self._init_configure()
         self.np_random = None
         self.seed()
@@ -83,7 +83,7 @@ class Base(GoalEnv):
             observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
         ))
         self.goal_dim = np.prod(obs['achieved_goal'].shape)
-        # self.goal_state_dim = np.prod(self.goal_state.shape)
+        self.goal_state_dim = np.prod(self.goal_state.shape)
 
     def read_model(self, model_filename):
 
@@ -100,7 +100,8 @@ class Base(GoalEnv):
         return [seed]
 
     # def set_state(self, qpos, qvel):
-    #     assert qpos.shape == (self.model.nq,) and qvel.shape == (self.model.nv,)
+    #     self.physics.set_state()
+    #     self.physics.get_state()
     #     old_state = self.sim.get_state()
     #     new_state = mujoco_py.MjSimState(old_state.time, qpos, qvel,
     #                                      old_state.act, old_state.udd_state)

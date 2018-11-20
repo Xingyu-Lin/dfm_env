@@ -7,30 +7,6 @@ from utils.util import get_name_arr_and_len
 from dm_control import mujoco
 from dm_control.suite import base
 
-init_qpos = {
-    'arm_j0': 0.,
-    'arm_j1': 0.,
-    'arm_j2': 0.,
-    'arm_j3': 0.,
-    'arm_j4': 0.,
-    'arm_j5': 0.,
-    'arm_j6': 0.,
-    'gripper_jl': 0.,
-    'gripper_jr': 0.,
-}
-
-init_qvel = {
-    'arm_j0': 0.,
-    'arm_j1': 0.,
-    'arm_j2': 0.,
-    'arm_j3': 0.,
-    'arm_j4': 0.,
-    'arm_j5': 0.,
-    'arm_j6': 0.,
-    'gripper_jl': 0.,
-    'gripper_jr': 0.,
-}
-
 
 class RopeEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
@@ -71,14 +47,20 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # ----------------------------
     def _init_configure(self):
         self.configure_indexes()
-        self.n_actions = 8
+        self.n_actions = len(self.physics.data.ctrl)
+        n1 = len(self.state_arm_inds)
+        n2 = len(self.state_gripper_inds)
+        n3 = len(self.state_rope_rot_inds)
+        init_state_rope_ref = [-0.15, 0, 0.92, 1, 0, 0, 0]
+        self.init_qpos = np.hstack([np.zeros(n1 + n2), init_state_rope_ref, np.zeros(n3)])
+        self.init_qvel = np.zeros(self.init_qpos.shape)
 
     def _reset_sim(self):
         # Sample goal and render image
 
         with self.physics.reset_context():
-            self.physics.data.qpos[:] = np.zeros(len(self.physics.data.qpos))
-            self.physics.data.qvel[:] = np.zeros(len(self.physics.data.qvel))
+            self.physics.data.qpos[:] = self.init_qpos
+            self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
 
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
@@ -101,15 +83,23 @@ class RopeEnv(Base, gym.utils.EzPickle):
     def _sample_goal_state(self):
         """Samples a new goal in state space and returns it.
         """
-        return []
+        n = len(self.state_rope_rot_inds)
+        thetas = np.random.random(n, ) * 2 * np.pi
+
+        goal_state = np.hstack([self.init_qpos[self.state_rope_ref_inds], np.cos(thetas), np.sin(thetas)])
+        # TODO Do forward dynamics to get the achiavable goal state
+        # self.set_state()
+        return goal_state
 
     def _get_obs(self):
         if self.use_visual_observation:
             obs = self.render(depth=False)
         else:
-            obs = np.concatenate((self.physics.data.qpos.copy(), self.physics.data.qvel.copy()), axis=0)
-
-        # TODO Figure out how to specify goal
+            thetas = self.physics.data.qpos[self.state_rope_rot_inds]
+            obs = np.concatenate((self.physics.data.qpos[self.state_arm_inds].copy(),
+                                  self.physics.data.qpos[self.state_gripper_inds].copy(),
+                                  self.physics.data.qpos[self.state_rope_ref_inds].copy(),
+                                  np.cos(thetas), np.sin(thetas), self.physics.data.qvel.copy()), axis=0)
 
         if self.use_image_goal:
             assert False
@@ -162,7 +152,9 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # ----------------------------
     @property
     def rope_state(self):
-        return self.physics.data.qpos[self.state_rope_inds]
+        ref_pose = self.physics.data.qpos[:7]
+        thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
+        return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
 
     def configure_indexes(self):
         # Arm and gripper action ind
@@ -173,9 +165,13 @@ class RopeEnv(Base, gym.utils.EzPickle):
         # Rope
         list_qpos = get_name_arr_and_len(self.physics.named.data.qpos, 0)[0]
 
-        self.state_rope_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J"]
+        self.state_arm_inds = [idx for idx, s in enumerate(list_qpos) if 'arm_' in s]
+        self.state_gripper_inds = [idx for idx, s in enumerate(list_qpos) if 'gripper' in s]
+        self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "J_ref"]
+        self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J" and s != 'J_ref']
+        self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
 
-    # def action_spec(self):
+        # def action_spec(self):
     #     """Returns a `BoundedArraySpec` matching the `physics` actuators."""
     #     return mujoco.action_spec(self.physics)
     #

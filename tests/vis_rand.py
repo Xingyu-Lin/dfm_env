@@ -21,6 +21,8 @@ if __name__ == '__main__':
 
     # env.reset()
     # print(env.physics.named.model.body_pos)
+    print(env.goal_state)
+    print(env.physics.get_state())
     exit()
     # action = random_policy().squeeze()
     action = np.ones((8,)) * 100
