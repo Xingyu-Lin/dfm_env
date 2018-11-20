@@ -16,12 +16,12 @@ def random_policy(time_step=None):
 
 if __name__ == '__main__':
 
-    env = RopeEnv()
+    env = RopeEnv(use_visual_observation=False, use_image_goal=False)
     # viewer.launch(env)
 
     # env.reset()
     # print(env.physics.named.model.body_pos)
-    # print(env.physics.named.data.geom_xpos)
+    exit()
     # action = random_policy().squeeze()
     action = np.ones((8,)) * 100
     while True:

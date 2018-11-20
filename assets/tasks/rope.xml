@@ -10,7 +10,7 @@
     <worldbody>
 
         <body name="B15" pos="-0.15 0 0.92">
-            <freejoint name="rope_free"/>
+            <freejoint name="J_ref"/>
             <composite type="rope" count="31 1 1" spacing="0.04" offset="0 0 2">
                 <joint kind="main" damping="0.005"/>
                 <geom type="capsule" size=".01 .015" rgba=".8 .2 .1 1"/>

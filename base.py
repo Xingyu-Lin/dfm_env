@@ -17,30 +17,6 @@ from dm_control.utils import io as resources
 import cv2 as cv
 import copy
 
-init_qpos = {
-    'arm_j0': 0.,
-    'arm_j1': 0.,
-    'arm_j2': 0.,
-    'arm_j3': 0.,
-    'arm_j4': 0.,
-    'arm_j5': 0.,
-    'arm_j6': 0.,
-    'gripper_jl': 0.,
-    'gripper_jr': 0.,
-}
-
-init_qvel = {
-    'arm_j0': 0.,
-    'arm_j1': 0.,
-    'arm_j2': 0.,
-    'arm_j3': 0.,
-    'arm_j4': 0.,
-    'arm_j5': 0.,
-    'arm_j6': 0.,
-    'gripper_jl': 0.,
-    'gripper_jr': 0.,
-}
-
 
 class Base(GoalEnv):
     '''
@@ -60,6 +36,8 @@ class Base(GoalEnv):
             raise IOError("File %s does not exist" % fullpath)
 
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
+        self.n_actions = n_actionsq
+        self._init_configure()
         self.np_random = None
         self.seed()
 
@@ -95,7 +73,8 @@ class Base(GoalEnv):
 
         # TODO add this as an argument
         self.use_auxiliary_rewards = False
-        self.action_space = spaces.Box(-1., 1., shape=(n_actions,), dtype='float32')
+
+        self.action_space = spaces.Box(-np.inf, np.inf, shape=(self.n_actions,), dtype='float32')
         obs = self.reset()
 
         self.observation_space = spaces.Dict(dict(
@@ -162,6 +141,9 @@ class Base(GoalEnv):
 
     # methods to override:
     # ----------------------------
+    def _init_configure(self):
+        pass
+
     def _reset_sim(self):
         """Resets a simulation and indicates whether or not it was successful.
         If a reset was unsuccessful (e.g. if a randomized state caused an error in the

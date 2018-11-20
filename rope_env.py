@@ -3,12 +3,38 @@ import gym
 import numpy as np
 
 from base import Base
+from utils.util import get_name_arr_and_len
 from dm_control import mujoco
 from dm_control.suite import base
 
+init_qpos = {
+    'arm_j0': 0.,
+    'arm_j1': 0.,
+    'arm_j2': 0.,
+    'arm_j3': 0.,
+    'arm_j4': 0.,
+    'arm_j5': 0.,
+    'arm_j6': 0.,
+    'gripper_jl': 0.,
+    'gripper_jr': 0.,
+}
+
+init_qvel = {
+    'arm_j0': 0.,
+    'arm_j1': 0.,
+    'arm_j2': 0.,
+    'arm_j3': 0.,
+    'arm_j4': 0.,
+    'arm_j5': 0.,
+    'arm_j6': 0.,
+    'gripper_jl': 0.,
+    'gripper_jr': 0.,
+}
+
+
 class RopeEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
-                 horizon=50, image_size=400, action_type='torque',
+                 n_actions=8, horizon=50, image_size=400, action_type='torque',
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
@@ -33,24 +59,27 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.use_dof = use_dof
         self.action_type = action_type
 
-        Base.__init__(self, model_path=model_path, n_substeps=n_substeps, horizon=horizon, image_size=image_size,
-                      use_image_goal=use_image_goal, use_visual_observation=use_visual_observation,
+        Base.__init__(self, model_path=model_path, n_substeps=n_substeps, horizon=horizon, n_actions=n_actions,
+                      image_size=image_size, use_image_goal=use_image_goal,
+                      use_visual_observation=use_visual_observation,
                       with_goal=with_goal, reward_type='sparse', distance_threshold=distance_threshold,
-                      distance_threshold_obs=distance_threshold_obs, use_true_reward=use_true_reward, n_actions=8)
+                      distance_threshold_obs=distance_threshold_obs, use_true_reward=use_true_reward)
 
         gym.utils.EzPickle.__init__(self)
 
-        # self.configure_indexes()
     # Implementation of functions from GoalEnvExt
     # ----------------------------
+    def _init_configure(self):
+        self.configure_indexes()
+        self.n_actions = 8
 
     def _reset_sim(self):
         # Sample goal and render image
 
-        # with self.physics.reset_context():
-            # physics.data.qpos[:] =
-            # physics.data.qvel[:] =
-            # physics.data.ctrl[:] =
+        with self.physics.reset_context():
+            self.physics.data.qpos[:] = np.zeros(len(self.physics.data.qpos))
+            self.physics.data.qvel[:] = np.zeros(len(self.physics.data.qvel))
+            self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
 
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
         # self.set_state(qpos, qvel=self.init_qvel)
@@ -69,21 +98,26 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
         return True
 
+    def _sample_goal_state(self):
+        """Samples a new goal in state space and returns it.
+        """
+        return []
+
     def _get_obs(self):
         if self.use_visual_observation:
             obs = self.render(depth=False)
         else:
-            # TODO
             obs = np.concatenate((self.physics.data.qpos.copy(), self.physics.data.qvel.copy()), axis=0)
 
         # TODO Figure out how to specify goal
-        desired_goal = achieved_goal = np.zeros(5)
-        # if self.use_image_goal:
-        #     desired_goal = self.goal_observation
-        #     achieved_goal = obs
-        # else:
-        #     desired_goal = self.get_goal_location()
-        #     achieved_goal = self.get_end_effector_location()
+
+        if self.use_image_goal:
+            assert False
+            desired_goal = self.goal_observation
+            achieved_goal = obs
+        else:
+            desired_goal = self.goal_state
+            achieved_goal = self.rope_state
 
         return {
             'observation': obs.copy(),
@@ -106,31 +140,40 @@ class RopeEnv(Base, gym.utils.EzPickle):
             if self.use_dof == 'both':
                 self.physics.data.ctrl[:] = ctrl
             elif self.use_dof == 'arm':
-                self.physics.data.ctrl[self.arm_inds] = ctrl
+                self.physics.data.ctrl[self.action_arm_inds] = ctrl
             else:
-                self.physics.data.ctrl[self.gripper_inds] = ctrl + 1
+                self.physics.data.ctrl[self.action_gripper_inds] = ctrl + 1
         else:
             self.physics.data.ctrl[:] = 0
             if self.use_dof == 'both':
                 self.physics.data.qvel[0:len(ctrl)] = ctrl
             elif self.use_dof == 'arm':
-                self.physics.data.qvel[self.arm_inds] = ctrl
+                self.physics.data.qvel[self.action_arm_inds] = ctrl
             else:
-                self.physics.data.qvel[self.gripper_inds] = ctrl
+                self.physics.data.qvel[self.action_gripper_inds] = ctrl
 
     def get_current_info(self):
         return {}
+
     # def set_hidden_goal(self):
     #     self.sim.model.geom_rgba[9, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
 
-
     # Env specific helper functions
     # ----------------------------
-    def configure_indexes(self):
+    @property
+    def rope_state(self):
+        return self.physics.data.qpos[self.state_rope_inds]
 
-        list_joints = self.physics.named.data.ctrl.axes.row.names
-        self.arm_inds = [idx for idx, s in enumerate(list_joints) if 'tj' in s]
-        self.gripper_inds = [idx for idx, s in enumerate(list_joints) if 'tg' in s]
+    def configure_indexes(self):
+        # Arm and gripper action ind
+        list_joints = get_name_arr_and_len(self.physics.named.data.ctrl, 0)[0]
+        self.action_arm_inds = [idx for idx, s in enumerate(list_joints) if 'tj' in s]
+        self.action_gripper_inds = [idx for idx, s in enumerate(list_joints) if 'tg' in s]
+
+        # Rope
+        list_qpos = get_name_arr_and_len(self.physics.named.data.qpos, 0)[0]
+
+        self.state_rope_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J"]
 
     # def action_spec(self):
     #     """Returns a `BoundedArraySpec` matching the `physics` actuators."""
