@@ -242,6 +242,7 @@ class Base(GoalEnv):
         return self._get_obs()
 
     def step(self, action):
+        action = action.flatten()
         action = np.clip(action, self.action_space.low, self.action_space.high)
         if self.use_auxiliary_rewards:
             prev_frame = self.render()
@@ -277,6 +278,7 @@ class Base(GoalEnv):
         done = False
         if self.time_step >= self.horizon:
             done = True
+
         return obs, reward, done, info
 
     def render(self, image_size=None, depth=True, camera_name=None):

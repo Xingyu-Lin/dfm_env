@@ -9,7 +9,7 @@ from dm_control.suite import base
 
 
 class RopeEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
+    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=5,
                  n_actions=8, horizon=50, image_size=400, action_type='torque',
                  with_goal=False,
                  use_visual_observation=True,
@@ -53,7 +53,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n3 = len(self.state_rope_rot_inds)
         init_state_rope_ref = [-0.15, 0, 0.92, 1, 0, 0, 0]
         self.init_qpos = np.hstack([np.zeros(n1 + n2), init_state_rope_ref, np.zeros(n3)])
-        self.init_qvel = np.zeros(self.init_qpos.shape)
+        self.init_qvel = np.zeros(len(self.physics.data.qvel),)
 
     def _reset_sim(self):
         # Sample goal and render image
@@ -62,7 +62,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-
+        self.physics.step()
+        self.goal_state = self._sample_goal_state()
+        if self.use_image_goal:
+            self.goal_observation = self.render(depth=False)
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
         # self.set_state(qpos, qvel=self.init_qvel)
         # self.goal_state = self.get_end_effector_location()
@@ -71,7 +74,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         # qvel = self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
         # qvel[-2:] = 0
         # self.set_state(qpos, qvel)
-        # self.goal_observation = self.render(mode='rgb_array', depth=False)
+        #
         # qpos = self.np_random.uniform(low=-0.1, high=0.1, size=self.model.nq) + self.init_qpos
         # qpos[-2:] = self.goal_state
         # qvel = self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
@@ -171,9 +174,6 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J" and s != 'J_ref']
         self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
 
-        # def action_spec(self):
-    #     """Returns a `BoundedArraySpec` matching the `physics` actuators."""
-    #     return mujoco.action_spec(self.physics)
     #
     # def get_observation(self):
     #     pass
