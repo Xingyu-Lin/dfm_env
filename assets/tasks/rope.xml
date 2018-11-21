@@ -10,7 +10,7 @@
     <include file="./dfm_env/assets/robots/sawyer.xml"/>
     <worldbody>
 
-        <body name="mocap_body" pos="0.16 0.119 1.09" mocap="true">
+        <body name="mocap_body" pos="0.3 0 0.94" mocap="true">
             <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.7" size="0.005 0.005 0.005" type="box"></geom>
             <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="1 0.005 0.005" type="box"></geom>
             <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="0.005 1 0.001" type="box"></geom>

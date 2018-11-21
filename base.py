@@ -27,7 +27,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 initial_qpos=None, default_camera_name='static_camera'):
+                 default_camera_name='static_camera'):
         if model_path.startswith("/"):
             fullpath = model_path
         else:
@@ -41,7 +41,7 @@ class Base(GoalEnv):
         self.np_random = None
         self.seed()
 
-        self._env_setup(initial_qpos=initial_qpos)
+        # self._env_setup(initial_qpos=initial_qpos)
         # TODO
         # self.initial_state = copy.deepcopy(self.sim.get_state())
         self.n_substeps = n_substeps
@@ -194,11 +194,11 @@ class Base(GoalEnv):
         """
         pass
 
-    def _env_setup(self, initial_qpos):
-        """Initial configuration of the environment. Can be used to configure initial state
-        and extract information from the simulation.
-        """
-        pass
+    # def _env_setup(self, initial_qpos):
+    #     """Initial configuration of the environment. Can be used to configure initial state
+    #     and extract information from the simulation.
+    #     """
+    #     pass
 
     def set_hidden_goal(self):
         """
