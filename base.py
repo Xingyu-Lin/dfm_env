@@ -213,7 +213,7 @@ class Base(GoalEnv):
     def _sample_goal_state(self):
         """Samples a new goal in state space and returns it.
         """
-        return None
+        return None, None
 
     # Core functions framework
     # -----------------------------
@@ -230,7 +230,7 @@ class Base(GoalEnv):
         if not self.with_goal:
             self.set_hidden_goal()
 
-        goal_state = self._sample_goal_state()
+        goal_state, _ = self._sample_goal_state()
         if goal_state is None:
             self.goal_state = None
         else:

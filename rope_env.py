@@ -53,7 +53,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n3 = len(self.state_rope_rot_inds)
         init_state_rope_ref = [-0.15, 0, 0.92, 1, 0, 0, 0]
         self.init_qpos = np.hstack([np.zeros(n1 + n2), init_state_rope_ref, np.zeros(n3)])
-        self.init_qvel = np.zeros(len(self.physics.data.qvel),)
+        self.init_qvel = np.zeros(len(self.physics.data.qvel), )
 
     def _reset_sim(self):
         # Sample goal and render image
@@ -63,9 +63,24 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
         self.physics.step()
-        self.goal_state = self._sample_goal_state()
+
+        # Get the goal after the environment is stable
+        self.goal_state, goal_theta = self._sample_goal_state()
+        with self.physics.reset_context():
+            self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
+            self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
+            for _ in range(1000):
+                self.physics.step()
+        self.goal_state = self.get_achieved_goal_state()
+
+        with self.physics.reset_context():
+            self.physics.data.qpos[:] = self.init_qpos
+            self.physics.data.qvel[:] = self.init_qvel
+            self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+
         if self.use_image_goal:
             self.goal_observation = self.render(depth=False)
+
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
         # self.set_state(qpos, qvel=self.init_qvel)
         # self.goal_state = self.get_end_effector_location()
@@ -87,12 +102,13 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """Samples a new goal in state space and returns it.
         """
         n = len(self.state_rope_rot_inds)
-        thetas = np.random.random(n, ) * 2 * np.pi
+        thetas = np.random.random(n, ) * 0.1
+        # thetas = np.random.random(n, ) * 2 * np.pi
 
         goal_state = np.hstack([self.init_qpos[self.state_rope_ref_inds], np.cos(thetas), np.sin(thetas)])
         # TODO Do forward dynamics to get the achiavable goal state
         # self.set_state()
-        return goal_state
+        return goal_state, thetas
 
     def _get_obs(self):
         if self.use_visual_observation:
@@ -110,7 +126,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
             achieved_goal = obs
         else:
             desired_goal = self.goal_state
-            achieved_goal = self.rope_state
+            achieved_goal = self.get_achieved_goal_state()
 
         return {
             'observation': obs.copy(),
@@ -148,13 +164,9 @@ class RopeEnv(Base, gym.utils.EzPickle):
     def get_current_info(self):
         return {}
 
-    # def set_hidden_goal(self):
-    #     self.sim.model.geom_rgba[9, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
-
     # Env specific helper functions
     # ----------------------------
-    @property
-    def rope_state(self):
+    def get_achieved_goal_state(self):
         ref_pose = self.physics.data.qpos[:7]
         thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
         return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
@@ -173,12 +185,3 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "J_ref"]
         self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J" and s != 'J_ref']
         self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
-
-    #
-    # def get_observation(self):
-    #     pass
-    #
-    # def get_reward(self):
-    #     pass
-    # def initialize_episode(self, physics):
-    #     pass
