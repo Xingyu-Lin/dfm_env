@@ -10,7 +10,7 @@ from dm_control.suite import base
 
 class RopeEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=5,
-                 n_actions=8, horizon=50, image_size=400, action_type='torque',
+                 n_actions=2, horizon=50, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
@@ -47,7 +47,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # ----------------------------
     def _init_configure(self):
         self.configure_indexes()
-        self.n_actions = len(self.physics.data.ctrl)
+        #self.n_actions = len(self.physics.data.ctrl)
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
         n3 = len(self.state_rope_rot_inds)
@@ -143,6 +143,36 @@ class RopeEnv(Base, gym.utils.EzPickle):
     #         'g_state': self.get_goal_location().copy()
     #     }
     #     return info
+    def reset_mocap2body_xpos(self):
+        """Resets the position and orientation of the mocap bodies to the same
+        values as the bodies they're welded to.
+        """
+
+        if (self.physics.model.eq_type is None or
+                self.physics.model.eq_obj1id is None or
+                self.physics.model.eq_obj2id is None):
+            return
+
+        for eq_type, obj1_id, obj2_id in zip(self.physics.model.eq_type,
+                                             self.physics.model.eq_obj1id,
+                                             self.physics.model.eq_obj2id):
+
+            #if eq_type != mujoco_py.const.EQ_WELD:
+            #    continue
+
+            mocap_id = self.physics.model.body_mocapid[obj1_id]
+            if mocap_id != -1:
+                # obj1 is the mocap, obj2 is the welded body
+                body_idx = obj2_id
+            else:
+                # obj2 is the mocap, obj1 is the welded body
+                mocap_id = self.physics.model.body_mocapid[obj2_id]
+                body_idx = obj1_id
+            #print(mocap_id)
+            if mocap_id == -1 :
+                continue
+            self.physics.data.mocap_pos[mocap_id][:] = self.physics.model.body_pos[body_idx]
+            self.physics.data.mocap_quat[mocap_id][:] = self.physics.model.body_quat[body_idx]
 
     def _set_action(self, ctrl):
         if self.action_type == 'torque':
@@ -152,7 +182,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 self.physics.data.ctrl[self.action_arm_inds] = ctrl
             else:
                 self.physics.data.ctrl[self.action_gripper_inds] = ctrl + 1
-        else:
+        elif self.action_type == 'velocity':
             self.physics.data.ctrl[:] = 0
             if self.use_dof == 'both':
                 self.physics.data.qvel[0:len(ctrl)] = ctrl
@@ -160,6 +190,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 self.physics.data.qvel[self.action_arm_inds] = ctrl
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
+        else:
+            self.physics.data.ctrl[:] = 0
+            #self.reset_mocap2body_xpos()
+            self.physics.data.mocap_pos[0, 0:len(ctrl)] = ctrl
 
     def get_current_info(self):
         return {}
