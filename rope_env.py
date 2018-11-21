@@ -2,8 +2,8 @@
 import gym
 import numpy as np
 
-from base import Base
-from utils.util import get_name_arr_and_len
+from .base import Base
+from .utils.util import get_name_arr_and_len
 from dm_control import mujoco
 from dm_control.suite import base
 

@@ -1,17 +1,17 @@
 <mujoco>
-    <compiler angle="radian" meshdir="meshes"/>
+    <compiler angle="radian"/>
     <!--<option gravity="0 0 -9.81" integrator="RK4"/>-->
     <option timestep="0.002">
         <flag warmstart="enable"></flag>
     </option>
 
-    <include file="./assets/scenes/scene.xml"/>
-    <include file="./assets/robots/sawyer.xml"/>
+    <include file="./dfm_env/assets/scenes/scene.xml"/>
+    <include file="./dfm_env/assets/robots/sawyer.xml"/>
     <worldbody>
 
-        <body name="B15" pos="-0.15 0 0.92">
+        <body name="B7" pos="-0.15 0 0.92">
             <freejoint name="J_ref"/>
-            <composite type="rope" count="31 1 1" spacing="0.04" offset="0 0 2">
+            <composite type="rope" count="15 1 1" spacing="0.04" offset="0 0 2">
                 <joint kind="main" damping="0.005"/>
                 <geom type="capsule" size=".01 .015" rgba=".8 .2 .1 1"/>
             </composite>
