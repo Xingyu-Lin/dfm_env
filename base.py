@@ -74,13 +74,13 @@ class Base(GoalEnv):
         # TODO add this as an argument
         self.use_auxiliary_rewards = False
 
-        self.action_space = spaces.Box(-np.inf, np.inf, shape=(self.n_actions,), dtype='float32')
+        self.action_space = spaces.Box(-1, 1, shape=(self.n_actions,), dtype='float32')
         obs = self.reset()
 
         self.observation_space = spaces.Dict(dict(
-            desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
-            achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
-            observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
+            desired_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
+            achieved_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
+            observation=spaces.Box(-1, 1, shape=obs['observation'].shape, dtype='float32'),
         ))
         self.goal_dim = np.prod(obs['achieved_goal'].shape)
         self.goal_state_dim = np.prod(self.goal_state.shape)

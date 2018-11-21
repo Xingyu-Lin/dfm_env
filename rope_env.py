@@ -9,7 +9,7 @@ from dm_control.suite import base
 
 
 class RopeEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=5,
+    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
                  n_actions=3, horizon=50, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
@@ -138,15 +138,16 @@ class RopeEnv(Base, gym.utils.EzPickle):
             'desired_goal': desired_goal.copy()
         }
 
-    # def get_current_info(self):
-    #     """
-    #     :return: The true current state, 'ag_state', and goal state, 'g_state'
-    #     """
-    #     info = {
-    #         'ag_state': self.get_end_effector_location().copy(),
-    #         'g_state': self.get_goal_location().copy()
-    #     }
-    #     return info
+    def get_current_info(self):
+        """
+        :return: The true current state, 'ag_state', and goal state, 'g_state'
+        """
+        info = {
+            'ag_state': self.get_achieved_goal_state(),
+            'g_state': self.goal_state.copy()
+        }
+        return info
+
     def reset_mocap2body_xpos(self):
         """Resets the position and orientation of the mocap bodies to the same
         values as the bodies they're welded to.
@@ -180,6 +181,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
 
     def _set_action(self, ctrl):
+        # todo ADD argument for mocap constrained 2d
+        ctrl = ctrl/100
         if self.action_type == 'torque':
             assert False
             if self.use_dof == 'both':
@@ -198,19 +201,9 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-
-
             self.reset_mocap2body_xpos()
             self.physics.data.mocap_quat[:] = [1, 1, 0, 0]
-            self.physics.data.mocap_pos[0, 0:len(ctrl)] += ctrl
-            # self.physics.data.ctrl[:] = 0
-            # print((np.random.random((3, ))-0.5) /50)
-            # self.physics.data.mocap_pos[0, :] += (np.random.random((3, ))-0.5) /50
-
-            # self.physics.data.mocap_pos[0, 0:len(ctrl)] = ctrl
-
-    def get_current_info(self):
-        return {}
+            self.physics.data.mocap_pos[0, :3] += ctrl[:3]
 
     # Env specific helper functions
     # ----------------------------
