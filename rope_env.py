@@ -196,7 +196,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
             self.reset_mocap2body_xpos()
-            self.physics.data.mocap_quat[:] = [1, 1, 0, 0]
+            self.physics.data.mocap_quat[:] = [0.679, 0.734, 0, 0]
             self.physics.data.mocap_pos[0, 0:len(ctrl)] += ctrl
             # self.physics.data.ctrl[:] = 0
 
