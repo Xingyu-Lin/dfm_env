@@ -176,7 +176,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 continue
 
             self.physics.data.mocap_pos[mocap_id][:] = self.physics.data.xpos[body_idx]
-            # self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
+            self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
 
     def _set_action(self, ctrl):
         if self.action_type == 'torque':
@@ -195,9 +195,11 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-            self.physics.data.mocap_quat[:] = [1, 1, 0, 0]
-            # self.physics.data.ctrl[:] = 0
             self.reset_mocap2body_xpos()
+            self.physics.data.mocap_quat[:] = [1, 1, 0, 0]
+            self.physics.data.mocap_pos[0, 0:len(ctrl)] += ctrl
+            # self.physics.data.ctrl[:] = 0
+
             # print((np.random.random((3, ))-0.5) /50)
             # self.physics.data.mocap_pos[0, :] += (np.random.random((3, ))-0.5) /50
 
