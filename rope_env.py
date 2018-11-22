@@ -9,7 +9,7 @@ from dm_control.suite import base
 
 
 class RopeEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path='tasks/rope.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
+    def __init__(self, model_path='tasks/rope_temp.xml', distance_threshold=1e-2, distance_threshold_obs=0, n_substeps=20,
                  n_actions=3, horizon=50, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
