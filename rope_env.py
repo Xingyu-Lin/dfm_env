@@ -51,12 +51,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
         n3 = len(self.state_rope_rot_inds)
-        init_state_rope_ref = [-0.15, 0, 0.92, 1, 0, 0, 0]
-        # init_arm_qpos = [0., 0, 0, 0, 0, np.pi / 2, 0]
-        # init_gripper_qpos = [0, 0]
-        #input("------------")
-        self._move_gripper(gripper_target=[0.16, 0.119, 1.29], gripper_rotation=[0.679, 0.734, 0, 0])
-        #self.reset_mocap2body_xpos()
+        init_state_rope_ref = [-0.15, 0.4, 0.92, 1, 0, 0, 0]
+        self.gripper_init_pos = [0.15, 0.4, 1.09]
+        self.gripper_init_quat = [0, 1, 0, 0]
+        self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
         init_gripper_qpos = self.physics.data.qpos[self.state_gripper_inds]
@@ -77,7 +75,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         with self.physics.reset_context():
             self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
             self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
-            for _ in range(1000):
+            for _ in range(500):
                 self.physics.step()
         self.goal_state = self.get_achieved_goal_state()
 
@@ -85,7 +83,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-            self.reset_mocap2body_xpos()
+            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+
         if self.use_image_goal:
             self.goal_observation = self.render(depth=False)
 
@@ -103,7 +102,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         # qvel = self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
         # qvel[-2:] = 0
         # self.set_state(qpos, qvel)
-        self._move_gripper(gripper_target=[0.16, 0.119, 1.29], gripper_rotation=[0.707, 0.707, 0, 0])
+
         return True
 
     def _sample_goal_state(self):
@@ -174,7 +173,6 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 # obj2 is the mocap, obj1 is the welded body
                 mocap_id = self.physics.model.body_mocapid[obj2_id]
                 body_idx = obj1_id
-
             if mocap_id == -1:
                 continue
 
@@ -183,7 +181,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
     def _set_action(self, ctrl):
         # todo ADD argument for mocap constrained 2d
-        ctrl = ctrl/100
+        ctrl /= 20
+        # ctrl *=0
+        # print('mocap:' , self.physics.data.mocap_pos[0], self.physics.data.mocap_quat[0])
+        # print('gripper', self.physics.data.xpos[26], self.physics.data.xquat[26])
         if self.action_type == 'torque':
             assert False
             if self.use_dof == 'both':
@@ -202,15 +203,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-
-            self.reset_mocap2body_xpos()
-            self.physics.data.mocap_quat[:] = [0.679, 0.734, 0, 0]
+            if self.time_step % 50 == 0:
+                self.reset_mocap2body_xpos()
+            self.physics.data.mocap_quat[:] = self.gripper_init_quat
             self.physics.data.mocap_pos[0, 0:len(ctrl)] += ctrl
-            # self.physics.data.ctrl[:] = 0
-            # print((np.random.random((3, ))-0.5) /50)
-            # self.physics.data.mocap_pos[0, :] += (np.random.random((3, ))-0.5) /50
-
-            # self.physics.data.mocap_pos[0, 0:len(ctrl)] = ctrl
 
     # Env specific helper functions
     # ----------------------------
@@ -235,8 +231,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
 
     def _move_gripper(self, gripper_target, gripper_rotation):
-        self.reset_mocap2body_xpos()
         self.physics.data.mocap_pos[0][:] = gripper_target
         self.physics.data.mocap_quat[0][:] = gripper_rotation
-        for _ in range(3000):
+        for _ in range(500):
             self.physics.step()
