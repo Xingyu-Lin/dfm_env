@@ -182,6 +182,9 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_pos[mocap_id][:] = self.physics.data.xpos[body_idx]
             self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
 
+    def rope_control(self, idx, ctrl):
+        self.physics.data.ctrl[idx] = ctrl
+
     def _set_action(self, ctrl):
         # todo ADD argument for mocap constrained 2d
         ctrl /= 20
