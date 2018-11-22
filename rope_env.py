@@ -51,9 +51,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
         n3 = len(self.state_rope_rot_inds)
-        init_state_rope_ref = [-0.15, 0.4, 0.92, 1, 0, 0, 0]
-        self.gripper_init_pos = [0.15, 0.4, 1.09]
+        init_state_rope_ref = [-0.15, 0.6, 0.92, 1, 0, 0, 0]
+        self.gripper_init_pos = [0.35, 0.4, 1.09]
         self.gripper_init_quat = [0, 1, 0, 0]
+        self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
         self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
@@ -68,22 +69,24 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-            self.reset_mocap2body_xpos()
+            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         # Get the goal after the environment is stable
         self.goal_state, goal_theta = self._sample_goal_state()
         with self.physics.reset_context():
+
             self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
             self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
-            for _ in range(500):
+            for _ in range(3000):
                 self.physics.step()
+            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
         self.goal_state = self.get_achieved_goal_state()
 
-        with self.physics.reset_context():
-            self.physics.data.qpos[:] = self.init_qpos
-            self.physics.data.qvel[:] = self.init_qvel
-            self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+        # with self.physics.reset_context():
+        #     self.physics.data.qpos[:] = self.init_qpos
+        #     self.physics.data.qvel[:] = self.init_qvel
+        #     self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+        #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         if self.use_image_goal:
             self.goal_observation = self.render(depth=False)
