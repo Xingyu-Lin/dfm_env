@@ -55,8 +55,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
         n3 = len(self.state_rope_rot_inds)
-        init_state_rope_ref = [-0.15, 0.6, 0.92, 1, 0, 0, 0]
-        self.gripper_init_pos = [0.35, 0.4, 1.09]
+        init_state_rope_ref = [-0.15, 0.5, 0.92, 1, 0, 0, 0]
+        # self.gripper_init_pos = [0.35, 0.4, 1.09]
+        self.gripper_init_pos = self._sample_rope_init_pos()
+
         self.gripper_init_quat = [0, 1, 0, 0]
         self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
         self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
@@ -68,7 +70,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
     def _reset_sim(self):
         # Sample goal and render image
-
+        self.gripper_init_pos = self._sample_rope_init_pos()
         with self.physics.reset_context():
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
@@ -86,11 +88,11 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
         self.goal_state = self.get_achieved_goal_state()
 
-        # with self.physics.reset_context():
-        #     self.physics.data.qpos[:] = self.init_qpos
-        #     self.physics.data.qvel[:] = self.init_qvel
-        #     self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-        #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+        with self.physics.reset_context():
+            self.physics.data.qpos[:] = self.init_qpos
+            self.physics.data.qvel[:] = self.init_qvel
+            self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         if self.use_image_goal:
             self.goal_observation = self.render(depth=False)
@@ -219,13 +221,18 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_quat[:] = self.gripper_init_quat
             self.physics.data.mocap_pos[0, :3] += ctrl[:3]
             if not self.fix_gripper:
-                self.physics.data.ctrl['tg0'] = ctrl[3:]
+                self.physics.data.ctrl[self.action_gripper_inds] = ctrl[3:]
             else:
-                self.physics.named.data.qpos['gripper_jl'] = 0
-                self.physics.named.data.qpos['gripper_jr'] = 0
+                self.physics.named.data.qpos[self.state_gripper_inds] = 0
 
     # Env specific helper functions
     # ----------------------------
+    def _sample_rope_init_pos(self):
+        list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
+        rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s[0] == 'B']
+        sampled_idx = np.random.choice(rope_xpos_inds, 1)
+        return self.physics.data.xpos[sampled_idx] + np.array([0, 0,0.2])
+
     def get_achieved_goal_state(self):
         ref_pose = self.physics.data.qpos[:7]
         thetas = self.physics.data.qpos[self.state_rope_inds[7:]]

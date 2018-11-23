@@ -11,7 +11,7 @@
     <include file="./dfm_env/assets/robots/sawyer.xml" />
     <worldbody>
 
-        <body name="B7" pos="-0.15 0 0.92">
+        <body name="B7" pos="-0.15 0.5 0.92">
             <freejoint name="J_ref" />
             <composite count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main" />
