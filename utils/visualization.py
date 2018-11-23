@@ -19,3 +19,18 @@ class ViewerWrapper(object):
     def action_spec(self):
         """Returns a `BoundedArraySpec` matching the `physics` actuators."""
         return mujoco.action_spec(self.env.physics)
+
+
+def ViewerPolicyWrapper(ddpg_policy):
+    '''
+    policy: An optional callable corresponding to a policy to execute
+        within the environment. It should accept a `TimeStep` and return
+        a numpy array of actions conforming to the output of
+        `environment.action_spec()`.
+    '''
+
+    def dm_policy(time_step=None):
+        obs = time_step[3]
+        return ddpg_policy.get_actions(obs['observation'], obs['achieved_goal'], obs['desired_goal'])
+
+    return dm_policy
