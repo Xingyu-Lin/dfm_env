@@ -6,6 +6,7 @@ from .base import Base
 from .utils.util import get_name_arr_and_len
 from dm_control import mujoco
 from dm_control.suite import base
+import random
 
 
 class RopeEnv(Base, gym.utils.EzPickle):
@@ -78,24 +79,26 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         # Get the goal after the environment is stable
-        self.goal_state, goal_theta = self._sample_goal_state()
-        with self.physics.reset_context():
+        self._random_rope_motion()
 
-            self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
-            self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
-            for _ in range(3000):
-                self.physics.step()
-            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+        # self.goal_state, goal_theta = self._sample_goal_state()
+        # with self.physics.reset_context():
+        #
+        #     self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
+        #     self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
+        #     for _ in range(3000):
+        #         self.physics.step()
+        #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
         self.goal_state = self.get_achieved_goal_state()
+
+        if self.use_image_goal:
+            self.goal_observation = self.render(depth=False)
 
         with self.physics.reset_context():
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
-
-        if self.use_image_goal:
-            self.goal_observation = self.render(depth=False)
 
         # qpos = self.np_random.uniform(low=-2 * np.pi, high=2 * np.pi, size=self.model.nq)
         # self.set_state(qpos, qvel=self.init_qvel)
@@ -122,6 +125,20 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
         goal_state = np.hstack([self.init_qpos[self.state_rope_ref_inds], np.cos(thetas), np.sin(thetas)])
         return goal_state, thetas
+
+    def _random_rope_motion(self):
+        """Samples a random rope motor and physics steps to get new goal position.
+        """
+        #Sample a random rope actautor and action. Take 50 environment steps
+        random_index = self.ctrl_rope_indices[random.randrange(len(self.ctrl_rope_indices))]
+        self.physics.data.ctrl[random_index] += np.random.random(1,)
+        for _ in range(30):
+            self.physics.step()
+
+        # To get a stable rope configuration after gravity takes effect.
+        self.physics.data.ctrl[:] = 0
+        for _ in range(1000):
+            self.physics.step()
 
     def _get_obs(self):
         if self.use_visual_observation:
@@ -215,13 +232,14 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-            ctrl[:3] = 0
+            #ctrl[:3] = 0
+            ctrl[2] = 0
             # if self.time_step % 50 == 0:
             #     self.reset_mocap2body_xpos()
             self.physics.data.mocap_quat[:] = self.gripper_init_quat
             self.physics.data.mocap_pos[0, :3] += ctrl[:3]
             if not self.fix_gripper:
-                self.physics.data.ctrl[self.action_gripper_inds] = ctrl[3:]
+                self.physics.data.ctrl[self.ctrl_gripper_indices] = ctrl[3:]
             else:
                 self.physics.named.data.qpos[self.state_gripper_inds] = 0
 
@@ -252,6 +270,12 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "J_ref"]
         self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J" and s != 'J_ref']
         self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
+
+        list_ctrl = get_name_arr_and_len(self.physics.named.data.ctrl,0)[0]
+
+        self.ctrl_arm_indices = [idx for idx, s in enumerate(list_ctrl) if 'tj' in s]
+        self.ctrl_gripper_indices = [idx for idx, s in enumerate(list_ctrl) if 'tg' in s]
+        self.ctrl_rope_indices = [idx for idx, s in enumerate(list_ctrl) if 'tr' in s]
 
     def _move_gripper(self, gripper_target, gripper_rotation):
         self.physics.data.mocap_pos[0][:] = gripper_target
