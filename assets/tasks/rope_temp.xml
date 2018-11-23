@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='utf8'?>
+<mujoco>
+    <compiler angle="radian" />
+    
+    <option timestep="0.002">
+        <flag warmstart="enable" />
+    </option>
+
+
+    <include file="./dfm_env/assets/scenes/scene.xml" />
+    <include file="./dfm_env/assets/robots/sawyer.xml" />
+    <worldbody>
+
+        <body name="B7" pos="-0.15 0 0.92">
+            <freejoint name="J_ref" />
+            <composite count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
+                <joint damping="0.005" kind="main" />
+                <geom rgba=".8 .2 .1 1" size=".01 .015" type="capsule" />
+            </composite>
+        </body>
+
+    </worldbody>
+    <equality>
+        
+        <weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.65 0.6 0.001" solref="0.1 1" />
+    </equality>
+
+    <actuator>
+       
+        <motor ctrllimited="false" joint="J0_0" name="tr0" />
+        <motor ctrllimited="false" joint="J1_0" name="tr1" />
+        <motor ctrllimited="false" joint="J0_1" name="tr2" />
+        <motor ctrllimited="false" joint="J1_1" name="tr3" />
+        <motor ctrllimited="false" joint="J0_2" name="tr4" />
+        <motor ctrllimited="false" joint="J1_2" name="tr5" />
+        <motor ctrllimited="false" joint="J0_3" name="tr6" />
+        <motor ctrllimited="false" joint="J1_3" name="tr7" />
+        <motor ctrllimited="false" joint="J0_4" name="tr8" />
+        <motor ctrllimited="false" joint="J1_4" name="tr9" />
+        <motor ctrllimited="false" joint="J0_5" name="tr10" />
+        <motor ctrllimited="false" joint="J1_5" name="tr11" />
+        <motor ctrllimited="false" joint="J0_6" name="tr12" />
+        <motor ctrllimited="false" joint="J1_6" name="tr13" />
+        <motor ctrllimited="false" joint="J0_8" name="tr16" />
+        <motor ctrllimited="false" joint="J1_8" name="tr17" />
+        <motor ctrllimited="false" joint="J0_9" name="tr18" />
+        <motor ctrllimited="false" joint="J1_9" name="tr19" />
+        <motor ctrllimited="false" joint="J0_10" name="tr20" />
+        <motor ctrllimited="false" joint="J1_10" name="tr21" />
+        <motor ctrllimited="false" joint="J0_11" name="tr22" />
+        <motor ctrllimited="false" joint="J1_11" name="tr23" />
+        <motor ctrllimited="false" joint="J0_12" name="tr24" />
+        <motor ctrllimited="false" joint="J1_12" name="tr25" />
+        <motor ctrllimited="false" joint="J0_13" name="tr26" />
+        <motor ctrllimited="false" joint="J1_13" name="tr27" />
+        <motor ctrllimited="false" joint="J0_14" name="tr28" />
+        <motor ctrllimited="false" joint="J1_14" name="tr29" />
+    </actuator>
+
+</mujoco>

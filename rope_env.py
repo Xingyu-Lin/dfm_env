@@ -9,12 +9,12 @@ from dm_control.suite import base
 
 
 class RopeEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path='tasks/rope.xml', distance_threshold=5e-1, distance_threshold_obs=0, n_substeps=200,
-                 n_actions=3, horizon=50, image_size=400, action_type='mocap',
+    def __init__(self, model_path='tasks/rope_temp.xml', distance_threshold=1e-2, distance_threshold_obs=0,
+                 n_substeps=20, horizon=50, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
-                 use_true_reward=False, use_dof='both'):
+                 use_true_reward=False, use_dof='both', fix_gripper=True):
         '''
 
         :param model_path:
@@ -34,7 +34,11 @@ class RopeEnv(Base, gym.utils.EzPickle):
         # TODO change n_action to be dependent on action_type
         self.use_dof = use_dof
         self.action_type = action_type
-
+        self.fix_gripper = fix_gripper
+        if action_type == 'mocap':
+            n_actions = 4
+            if fix_gripper:
+                n_actions -= 1
         Base.__init__(self, model_path=model_path, n_substeps=n_substeps, horizon=horizon, n_actions=n_actions,
                       image_size=image_size, use_image_goal=use_image_goal,
                       use_visual_observation=use_visual_observation,
@@ -182,6 +186,9 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_pos[mocap_id][:] = self.physics.data.xpos[body_idx]
             self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
 
+    def rope_control(self, idx, ctrl):
+        self.physics.data.ctrl[idx] = ctrl
+
     def _set_action(self, ctrl):
         # todo ADD argument for mocap constrained 2d
         ctrl /= 20
@@ -206,10 +213,16 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-            if self.time_step % 50 == 0:
-                self.reset_mocap2body_xpos()
+            ctrl[:3] = 0
+            # if self.time_step % 50 == 0:
+            #     self.reset_mocap2body_xpos()
             self.physics.data.mocap_quat[:] = self.gripper_init_quat
-            self.physics.data.mocap_pos[0, 0:len(ctrl)] += ctrl
+            self.physics.data.mocap_pos[0, :3] += ctrl[:3]
+            if not self.fix_gripper:
+                self.physics.data.ctrl['tg0'] = ctrl[3:]
+            else:
+                self.physics.named.data.qpos['gripper_jl'] = 0
+                self.physics.named.data.qpos['gripper_jr'] = 0
 
     # Env specific helper functions
     # ----------------------------
