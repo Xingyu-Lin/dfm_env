@@ -40,7 +40,7 @@
 		</default>
 
 		<default class='gripper'>
-			<geom condim='4' density='2700' />
+			<geom solref='0.01 1' solimp='0.98 0.98 0.005' condim='4' density='2700' />
 			<joint limited='true' damping='0.001' stiffness='0.1' springref='0' />
 		</default>
 

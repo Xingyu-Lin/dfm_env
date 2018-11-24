@@ -163,8 +163,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """
 
         if (self.physics.model.eq_type is None or
-          self.physics.model.eq_obj1id is None or
-          self.physics.model.eq_obj2id is None):
+                    self.physics.model.eq_obj1id is None or
+                    self.physics.model.eq_obj2id is None):
             return
 
         for eq_type, obj1_id, obj2_id in zip(self.physics.model.eq_type,
@@ -215,7 +215,6 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-            ctrl[:3] = 0
             # if self.time_step % 50 == 0:
             #     self.reset_mocap2body_xpos()
             self.physics.data.mocap_quat[:] = self.gripper_init_quat
@@ -231,7 +230,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
         rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s[0] == 'B']
         sampled_idx = np.random.choice(rope_xpos_inds, 1)
-        return self.physics.data.xpos[sampled_idx] + np.array([0, 0,0.2])
+        return self.physics.data.xpos[sampled_idx] + np.array([0, 0, 0.2])
 
     def get_achieved_goal_state(self):
         ref_pose = self.physics.data.qpos[:7]
