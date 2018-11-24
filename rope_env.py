@@ -33,6 +33,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         Base class for sawyer manipulation environments
         '''
         # TODO change n_action to be dependent on action_type
+
         self.use_dof = use_dof
         self.action_type = action_type
         self.fix_gripper = fix_gripper
@@ -51,6 +52,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _init_configure(self):
+
         self.configure_indexes()
         # self.n_actions = len(self.physics.data.ctrl)
         n1 = len(self.state_arm_inds)
@@ -242,7 +244,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
                 self.physics.data.ctrl[self.ctrl_gripper_indices] = ctrl[3:]
             else:
                 self.physics.named.data.qpos[self.state_gripper_inds] = 0
-
+            #print(self._distance_between_gripper_rope_ref())
+            if self._distance_between_gripper_rope_ref() > 0.4 :
+                self.gripper_init_pos = self._sample_rope_init_pos()
+                self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
     # Env specific helper functions
     # ----------------------------
     def _sample_rope_init_pos(self):
@@ -282,3 +287,6 @@ class RopeEnv(Base, gym.utils.EzPickle):
         self.physics.data.mocap_quat[0][:] = gripper_rotation
         for _ in range(500):
             self.physics.step()
+
+    def _distance_between_gripper_rope_ref(self):
+        return np.linalg.norm(self.physics.named.data.xpos['B7'] - self.physics.named.data.xpos['arm_gripper_base'], axis=-1)

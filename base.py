@@ -28,6 +28,7 @@ class Base(GoalEnv):
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
                  default_camera_name='static_camera'):
+
         if model_path.startswith("/"):
             fullpath = model_path
         else:
@@ -122,6 +123,7 @@ class Base(GoalEnv):
             desired_goal = desired_goal.reshape([-1, self.goal_dim])
             d_threshold = self.distance_threshold_obs
         d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        
         if self.reward_type == 'sparse':
             return -(d > d_threshold).astype(np.float32)
         else:
@@ -281,7 +283,7 @@ class Base(GoalEnv):
 
         return obs, reward, done, info
 
-    def render(self, image_size=None, depth=True, camera_name=None):
+    def render(self, image_size=None, depth=False, camera_name=None):
         self._render_callback()
         if camera_name is None:
             camera_name = self.default_camera_name
