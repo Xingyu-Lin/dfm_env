@@ -11,7 +11,7 @@ import random
 
 class RopeEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path='tasks/rope_temp.xml', distance_threshold=1e-2, distance_threshold_obs=0,
-                 n_substeps=20, horizon=50, image_size=400, action_type='mocap',
+                 n_substeps=20, horizon=200, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
@@ -63,11 +63,14 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
         self.gripper_init_quat = [0, 1, 0, 0]
         self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+
         self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
-        init_gripper_qpos = self.physics.data.qpos[self.state_gripper_inds]
+        # init_gripper_qpos = self.physics.data.qpos[self.state_gripper_inds]
+        init_gripper_qpos = np.zeros((2,))
         self.init_qpos = np.hstack([init_arm_qpos, init_gripper_qpos, init_state_rope_ref, np.zeros(n3)])
+
         self.init_qvel = np.zeros(len(self.physics.data.qvel), )
 
     def _reset_sim(self):
@@ -108,7 +111,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
     def _random_rope_motion(self):
         """Samples a random rope motor and physics steps to get new goal position.
         """
-        # Sample a random rope actautor and action. Take 50 environment steps
+        # TODO apply force instead of torque
+        #Sample a random rope actautor and action. Take 40 environment steps
         random_index = self.ctrl_rope_indices[random.randrange(len(self.ctrl_rope_indices))]
         self.physics.data.ctrl[random_index] += np.random.random(1, )
         for _ in range(30):
@@ -159,8 +163,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """
 
         if (self.physics.model.eq_type is None or
-          self.physics.model.eq_obj1id is None or
-          self.physics.model.eq_obj2id is None):
+                    self.physics.model.eq_obj1id is None or
+                    self.physics.model.eq_obj2id is None):
             return
 
         for eq_type, obj1_id, obj2_id in zip(self.physics.model.eq_type,
@@ -221,7 +225,6 @@ class RopeEnv(Base, gym.utils.EzPickle):
             else:
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
-            # print(self.physics.named.data.xpos['arm_gripper_base'])
             ctrl = self._apply_mocap_boundary(ctrl)
             # ctrl[2] = 0
             # if self.time_step % 50 == 0:
@@ -240,6 +243,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
     # Env specific helper functions
     # ----------------------------
     def _sample_rope_init_pos(self):
+        # Sample one of the rope elements and put the gripper on top of it
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
         rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s[0] == 'B']
         sampled_idx = np.random.choice(rope_xpos_inds, 1)
