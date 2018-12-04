@@ -57,7 +57,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
         n3 = len(self.state_rope_rot_inds)
-        init_state_rope_ref = [-0.15, 0.5, 0.92, 1, 0, 0, 0]
+        init_state_rope_ref = [-0.15, 0.5, 0.705, 1, 0, 0, 0]
 
         self.gripper_init_pos = self._sample_rope_init_pos()
 
@@ -84,7 +84,18 @@ class RopeEnv(Base, gym.utils.EzPickle):
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         # Get the goal after the environment is stable
-        self._random_rope_motion()
+        # Option 1:
+        # self._random_rope_motion()
+        # Option 2:
+        self.goal_state, goal_theta = self._sample_goal_state()
+        with self.physics.reset_context():
+            # Move gripper to somewhere faraway from the rope
+            self._move_gripper(gripper_target=[-0.80443307,1.11125423,1.08857343], gripper_rotation=self.gripper_init_quat)
+            self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
+            self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
+            for _ in range(200):
+                self.physics.step()
+            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         self.goal_state = self.get_achieved_goal_state()
 
@@ -103,8 +114,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """Samples a new goal in state space and returns it.
         """
         n = len(self.state_rope_rot_inds)
-        thetas = np.random.random(n, ) * 0.1
-
+        thetas = (np.random.random(n, ) - 0.5) * 2
+        flexible_joints = np.random.randint(4, size=n)
+        flexible_joints = np.maximum(flexible_joints -2, 0)
+        thetas = thetas * flexible_joints
         goal_state = np.hstack([self.init_qpos[self.state_rope_ref_inds], np.cos(thetas), np.sin(thetas)])
         return goal_state, thetas
 
@@ -112,7 +125,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """Samples a random rope motor and physics steps to get new goal position.
         """
         # TODO apply force instead of torque
-        #Sample a random rope actautor and action. Take 40 environment steps
+        # Sample a random rope actautor and action. Take 40 environment steps
         random_index = self.ctrl_rope_indices[random.randrange(len(self.ctrl_rope_indices))]
         self.physics.data.ctrl[random_index] += np.random.random(1, )
         for _ in range(30):
@@ -163,8 +176,8 @@ class RopeEnv(Base, gym.utils.EzPickle):
         """
 
         if (self.physics.model.eq_type is None or
-                    self.physics.model.eq_obj1id is None or
-                    self.physics.model.eq_obj2id is None):
+          self.physics.model.eq_obj1id is None or
+          self.physics.model.eq_obj2id is None):
             return
 
         for eq_type, obj1_id, obj2_id in zip(self.physics.model.eq_type,
@@ -193,7 +206,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
 
     def _apply_mocap_boundary(self, ctrl):
 
-        boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.84, 0.88]]  # [min_val, max_val] for each of the dimension
+        boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.83, 0.88]]  # [min_val, max_val] for each of the dimension
         for i in range(3):
             if self.physics.data.mocap_pos[0][i] + ctrl[i] < boundary_range[i][0] and ctrl[i] < 0:
                 ctrl[i] = 0
@@ -247,7 +260,7 @@ class RopeEnv(Base, gym.utils.EzPickle):
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
         rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s[0] == 'B']
         sampled_idx = np.random.choice(rope_xpos_inds, 1)
-        return self.physics.data.xpos[sampled_idx] + np.array([0, 0, 0.2])
+        return self.physics.data.xpos[sampled_idx] + np.array([0, 0, -0.05])
 
     def get_achieved_goal_state(self):
         ref_pose = self.physics.data.qpos[:7]
