@@ -263,8 +263,10 @@ class RopeEnv(Base, gym.utils.EzPickle):
         return self.physics.data.xpos[sampled_idx] + np.array([0, 0, -0.05])
 
     def get_achieved_goal_state(self):
-        ref_pose = self.physics.data.qpos[:7]
+        ref_pose = self.physics.data.qpos[3:7]
         thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
+        # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
+        # Only need to achieve the angles
         return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
 
     def configure_indexes(self):

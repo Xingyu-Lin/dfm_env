@@ -10,10 +10,11 @@ from gym.utils import seeding
 from dm_control import mujoco, viewer
 from dm_control.rl import control
 from dm_control.suite import base
+from dm_control.rl.control import PhysicsError
 from dm_control.suite import common
 from dm_control.mujoco import Physics
 from dm_control.utils import io as resources
-
+from termcolor import colored
 import cv2 as cv
 import copy
 
@@ -249,8 +250,11 @@ class Base(GoalEnv):
         if self.use_auxiliary_rewards:
             prev_frame = self.render()
             self._set_action(action)
-            for _ in range(self.n_substeps):
-                self.physics.step()
+            try:
+                for _ in range(self.n_substeps):
+                    self.physics.step()
+            except PhysicsError as ex:
+                print(colored(ex, 'red'))
             self._step_callback()
             obs = self._get_obs()
             next_frame = self.render()
@@ -264,8 +268,11 @@ class Base(GoalEnv):
             }
         else:
             self._set_action(action)
-            for _ in range(self.n_substeps):
-                self.physics.step()
+            try:
+                for _ in range(self.n_substeps):
+                    self.physics.step()
+            except PhysicsError as ex:
+                print(colored(ex, 'red'))
             self._step_callback()
             obs = self._get_obs()
             aug_info = {}
