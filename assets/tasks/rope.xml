@@ -21,11 +21,12 @@
     </worldbody>
     <equality>
         <!--http://www.mujoco.org/forum/index.php?threads/mocap-control-makes-fingers-off-the-gripper-base.3792/-->
-         <weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.95 0.9 0.001" solref="0.02 1"></weld>
+        <weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.95 0.9 0.001"
+              solref="0.02 1"></weld>
     </equality>
 
     <actuator>
-       <!-- <motor joint='J0_0' name='tr0' ctrllimited='false'/>-->
+        <!-- <motor joint='J0_0' name='tr0' ctrllimited='false'/>-->
     </actuator>
 
 </mujoco>
