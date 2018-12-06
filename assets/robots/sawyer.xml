@@ -4,7 +4,7 @@
 	<!--
     <size njmax='600' nconmax='150' />
 	-->
-    <size njmax='1500' nconmax='300' />
+    <size njmax='3000' nconmax='2000' />
 
 	<!--  ================= Visual Elements ================= /-->
     <asset>
