@@ -1,0 +1,30 @@
+<mujoco>
+    <compiler angle="radian"/>
+    <!--<option gravity="0 0 -9.81" integrator="RK4"/>-->
+    <option timestep="0.002">
+        <flag warmstart="enable"></flag>
+    </option>
+
+
+    <include file="./dfm_env/assets/scenes/scene.xml"/>
+    <include file="./dfm_env/assets/robots/sawyer.xml"/>
+    <worldbody>
+
+        <body name="block" pos="-0.15 0 0.92">
+			<joint name="block" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object0" material="block_mat" mass="2"></geom>
+			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
+		</body>
+
+    </worldbody>
+    <equality>
+        <!--http://www.mujoco.org/forum/index.php?threads/mocap-control-makes-fingers-off-the-gripper-base.3792/-->
+        <weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.95 0.9 0.001"
+              solref="0.02 1"></weld>
+    </equality>
+
+    <actuator>
+        <!-- <motor joint='J0_0' name='tr0' ctrllimited='false'/>-->
+    </actuator>
+
+</mujoco>

@@ -4,9 +4,9 @@ from dfm_env.sawyer_env import SawyerEnv
 from .utils.util import get_name_arr_and_len
 
 
-class RopeEnv(SawyerEnv):
+class BlockPushEnv(SawyerEnv):
     def __init__(self, **kwargs):
-        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', **kwargs)
+        super(BlockPushEnv, self).__init__(model_path='tasks/block.xml')
 
     def _get_obs(self):
         if self.use_visual_observation:
