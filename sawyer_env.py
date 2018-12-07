@@ -91,18 +91,16 @@ class SawyerEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_quat[mocap_id][:] = self.physics.data.xquat[body_idx]
 
     def _apply_mocap_boundary(self, ctrl):
-
-        boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.83, 0.88]]  # [min_val, max_val] for each of the dimension
         for i in range(3):
-            if self.physics.data.mocap_pos[0][i] + ctrl[i] < boundary_range[i][0] and ctrl[i] < 0:
+            if self.physics.data.mocap_pos[0][i] + ctrl[i] < self.boundary_range[i][0] and ctrl[i] < 0:
                 ctrl[i] = 0
-            elif self.physics.data.mocap_pos[0][i] + ctrl[i] > boundary_range[i][1] and ctrl[i] > 0:
+            elif self.physics.data.mocap_pos[0][i] + ctrl[i] > self.boundary_range[i][1] and ctrl[i] > 0:
                 ctrl[i] = 0
         return ctrl
 
     def _set_action(self, ctrl):
         # todo ADD argument for mocap constrained 2d
-        ctrl /= 10
+        ctrl /= 20
         # ctrl *=0
         # print('mocap:' , self.physics.data.mocap_pos[0], self.physics.data.mocap_quat[0])
         # print('gripper', self.physics.data.xpos[26], self.physics.data.xquat[26])

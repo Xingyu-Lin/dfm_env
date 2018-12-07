@@ -35,7 +35,7 @@ class RopeEnv(SawyerEnv):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _init_configure(self):
-
+        self.boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.83, 0.88]]  # [min_val, max_val] for each of the dimension
         self.configure_indexes()
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)

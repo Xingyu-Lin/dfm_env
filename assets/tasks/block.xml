@@ -11,8 +11,8 @@
     <worldbody>
 
         <body name="block" pos="-0.15 0 0.92">
-			<joint name="block" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object0" material="block_mat" mass="2"></geom>
+			<joint name="j_block" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" name="object0" material="block_mat" mass="5"></geom>
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 
