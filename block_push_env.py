@@ -55,8 +55,6 @@ class BlockPushEnv(SawyerEnv):
         self.init_qvel = np.zeros(len(self.physics.data.qvel), )
 
     def _reset_sim(self):
-        print(self.physics.named.data.site_xpos)
-        exit()
         # Sample goal and render image
         with self.physics.reset_context():
             self.physics.data.qpos[:] = self.init_qpos
@@ -76,7 +74,9 @@ class BlockPushEnv(SawyerEnv):
             self.physics.data.qpos[:] = self.init_qpos
             self.physics.data.qvel[:] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+            self._set_target_pos(self.goal_state)
         init_block_pos = self._sample_block_pos()
         self._set_block_pos(init_block_pos)
         return True
@@ -99,6 +99,9 @@ class BlockPushEnv(SawyerEnv):
     def _set_block_pos(self, block_pos):
         self.physics.data.qpos[self.state_block_inds] = block_pos
 
+    def _set_target_pos(self, block_pos):
+        self.physics.named.model.body_pos[self.state_goal_body_ind] = block_pos
+
     def _get_block_pos(self):
         return self.physics.data.qpos[self.state_block_inds]
 
@@ -119,12 +122,10 @@ class BlockPushEnv(SawyerEnv):
         self.state_block_all_inds = [idx for idx, s in enumerate(list_qpos) if 'j_block' in s]
         self.state_block_inds = self.state_block_all_inds[:3]  # Only the pose and ignore the position
 
-        list_site_xpos = get_name_arr_and_len(self.physics.named.data.site_xpos, 0)[0]
-        print(list_site_xpos)
-        self.state_goal_site_ind = [idx for idx, s in enumerate(list_site_xpos) if 'object0' in s]
-        self.state_goal_site_ind = self.state_goal_site_ind[0]
-        print(self.state_goal_site_ind)
-        exit()
+        list_site_xpos = get_name_arr_and_len(self.physics.named.model.body_pos, 0)[0]
+
+        # print(self.physics.named.model.site_pos)
+        self.state_goal_body_ind = [idx for idx, s in enumerate(list_site_xpos) if s == 'target'][0]
 
         list_ctrl = get_name_arr_and_len(self.physics.named.data.ctrl, 0)[0]
 

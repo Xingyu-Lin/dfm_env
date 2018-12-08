@@ -124,7 +124,6 @@ class Base(GoalEnv):
             desired_goal = desired_goal.reshape([-1, self.goal_dim])
             d_threshold = self.distance_threshold_obs
         d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        
         if self.reward_type == 'sparse':
             return -(d > d_threshold).astype(np.float32)
         else:
@@ -282,7 +281,6 @@ class Base(GoalEnv):
 
         reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
         self.time_step += 1
-
         # Episode ends only when the horizon is reached
         done = False
         if self.time_step >= self.horizon:
