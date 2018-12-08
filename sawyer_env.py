@@ -15,7 +15,7 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
-                 use_true_reward=False, use_dof='both', fix_gripper=True):
+                 use_true_reward=False, use_dof='both', fix_gripper=True, ** kwargs):
         '''
 
         :param model_path:
@@ -45,7 +45,7 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                       image_size=image_size, use_image_goal=use_image_goal,
                       use_visual_observation=use_visual_observation,
                       with_goal=with_goal, reward_type='sparse', distance_threshold=distance_threshold,
-                      distance_threshold_obs=distance_threshold_obs, use_true_reward=use_true_reward)
+                      distance_threshold_obs=distance_threshold_obs, use_true_reward=use_true_reward, **kwargs)
 
         gym.utils.EzPickle.__init__(self)
 

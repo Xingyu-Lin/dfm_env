@@ -52,45 +52,62 @@ class RopeEnv(SawyerEnv):
         init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
         # init_gripper_qpos = self.physics.data.qpos[self.state_gripper_inds]
         init_gripper_qpos = np.zeros((2,))
+        self.init_indexes = self.state_arm_inds + self.state_gripper_inds + self.state_rope_ref_inds + self.state_rope_rot_inds
         self.init_qpos = np.hstack([init_arm_qpos, init_gripper_qpos, init_state_rope_ref, np.zeros(n3)])
-
-        self.init_qvel = np.zeros(len(self.physics.data.qvel), )
+        self.init_qvel = np.zeros(len(self.init_indexes), )
+        # print(len(self.state_arm_inds), len(init_arm_qpos))
+        # print(len(init_gripper_qpos), len(self.state_gripper_inds))
+        # print(len(init_state_rope_ref), len(self.state_rope_ref_inds))
+        # print(n3, len(self.state_rope_rot_inds))
+        # exit()
 
     def _reset_sim(self):
-        # Sample goal and render image
+        # Sample goal and render image, Get the goal after the environment is stable
 
         with self.physics.reset_context():
-            self.physics.data.qpos[:] = self.init_qpos
-            self.physics.data.qvel[:] = self.init_qvel
+            self.physics.data.qpos[self.init_indexes] = self.init_qpos
+            self.physics.data.qvel[self.init_indexes] = self.init_qvel
             self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
             self.gripper_init_pos = self._sample_rope_init_pos()
             self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
-        # Get the goal after the environment is stable
-        # Option 1:
-        # self._random_rope_motion()
-        # Option 2:
-        self.goal_state, goal_theta = self._sample_goal_state()
-        with self.physics.reset_context():
-            # Move gripper to somewhere faraway from the rope
-            self._move_gripper(gripper_target=[-0.80443307, 1.11125423, 1.08857343],
-                               gripper_rotation=self.gripper_init_quat)
-            self.physics.data.qpos[self.state_rope_rot_inds] = goal_theta
-            self.physics.data.qpos[self.state_rope_ref_inds[2]] += 0.2
-            for _ in range(200):
+            # Option 1:
+            # self._random_rope_motion()
+            # Option 2:
+            self.goal_state, goal_theta = self._sample_goal_state()
+            # Use the target rope
+            self.physics.data.qpos[self.state_target_rope_ref_inds] = self.physics.data.qpos[self.state_rope_ref_inds]
+            self.physics.data.qpos[self.state_target_rope_ref_inds[1]] -= self.visualization_offset
+            self.physics.data.qpos[self.state_target_rope_ref_inds[2]] += 0.2
+            self.physics.data.qpos[self.state_target_rope_rot_inds] = goal_theta
+            for _ in range(1000):
                 self.physics.step()
-            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
-        self.goal_state = self.get_achieved_goal_state()
+            if self.use_image_goal or True:
+                self.physics.data.qpos[self.state_target_rope_ref_inds[1]] += self.visualization_offset
+                target_original_transparancy = self.physics.model.geom_rgba[self.target_rope_geom_rgba_inds, 3][0]
+                self.physics.model.geom_rgba[self.target_rope_geom_rgba_inds, 3] = 1.
+                self.physics.model.geom_rgba[self.rope_geom_rgba_inds, 3] = 0
 
-        if self.use_image_goal:
-            self.goal_observation = self.render(depth=False)
+                # self.physics.model.geom_rgba[1, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
+                self.goal_observation = self.render(depth=False)
+                self.physics.data.qpos[self.state_target_rope_ref_inds[1]] -= self.visualization_offset
+                self.physics.model.geom_rgba[self.target_rope_geom_rgba_inds, 3] = target_original_transparancy
+                self.physics.model.geom_rgba[self.rope_geom_rgba_inds, 3] = 1.
+            # Set the target qpos
+            # self.physics.data.qpos[self.state_target_rope_inds] = self.physics.data.qpos[self.state_rope_inds]
+            # self.physics.data.qvel[self.state_target_rope_inds] = 0
+        self.goal_state = self.get_target_goal_state()
 
-        with self.physics.reset_context():
-            self.physics.data.qpos[:] = self.init_qpos
-            self.physics.data.qvel[:] = self.init_qvel
-            self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
-            self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+        # Move gripper to somewhere faraway from the rope
+        # self._move_gripper(gripper_target=[-0.80443307, 1.11125423, 1.08857343],
+        #                    gripper_rotation=self.gripper_init_quat)
+
+        # with self.physics.reset_context():
+        #     self.physics.data.qpos[self.init_indexes] = self.init_qpos
+        #     self.physics.data.qvel[self.init_indexes] = self.init_qvel
+        #     self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+        #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
         return True
 
@@ -102,7 +119,7 @@ class RopeEnv(SawyerEnv):
         flexible_joints = np.random.randint(4, size=n)
         flexible_joints = np.maximum(flexible_joints - 2, 0)
         thetas = thetas * flexible_joints
-        goal_state = np.hstack([self.init_qpos[self.state_rope_ref_inds], np.cos(thetas), np.sin(thetas)])
+        goal_state = np.hstack([np.cos(thetas), np.sin(thetas)])
         return goal_state, thetas
 
     def _random_rope_motion(self):
@@ -110,7 +127,7 @@ class RopeEnv(SawyerEnv):
         """
         # TODO apply force instead of torque
         # Sample a random rope actautor and action. Take 40 environment steps
-        random_index = self.ctrl_rope_indices[random.randrange(len(self.ctrl_rope_indices))]
+        random_index = self.ctrl_rope_inds[random.randrange(len(self.ctrl_rope_inds))]
         self.physics.data.ctrl[random_index] += np.random.random(1, )
         for _ in range(30):
             self.physics.step()
@@ -128,38 +145,56 @@ class RopeEnv(SawyerEnv):
     def _sample_rope_init_pos(self):
         # Sample one of the rope elements and put the gripper on top of it
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
-        rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s[0] == 'B']
+        rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_B')]
         sampled_idx = np.random.choice(rope_xpos_inds, 1)
-        return self.physics.data.xpos[sampled_idx] + np.array([0, 0, -0.05])
+        return self.physics.data.xpos[sampled_idx] + np.array([0, 0, 0.2])
+
+    def get_target_goal_state(self):
+        # ref_pose = self.physics.data.qpos[self.state_target_rope_ref_inds[-4:]]
+        thetas = self.physics.data.qpos[self.state_target_rope_inds[7:]]
+        # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
+        # Only need to achieve the angles
+        return np.hstack([np.cos(thetas), np.sin(thetas)])
 
     def get_achieved_goal_state(self):
-        ref_pose = self.physics.data.qpos[3:7]
+        # ref_pose = self.physics.data.qpos[self.state_rope_ref_inds[-4:]]
         thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
         # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
         # Only need to achieve the angles
-        return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
+        return np.hstack([np.cos(thetas), np.sin(thetas)])
 
     def configure_indexes(self):
-        # Arm and gripper action ind
+        # Arm and gripper action joints
         list_joints = get_name_arr_and_len(self.physics.named.data.ctrl, 0)[0]
         self.action_arm_inds = [idx for idx, s in enumerate(list_joints) if 'tj' in s]
         self.action_gripper_inds = [idx for idx, s in enumerate(list_joints) if 'tg' in s]
 
-        # Rope
+        # qpos index for arm, gripper and rope
         list_qpos = get_name_arr_and_len(self.physics.named.data.qpos, 0)[0]
 
         self.state_arm_inds = [idx for idx, s in enumerate(list_qpos) if 'arm_' in s]
         self.state_gripper_inds = [idx for idx, s in enumerate(list_qpos) if 'gripper' in s]
-        self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "J_ref"]
-        self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s[0] == "J" and s != 'J_ref']
+
+        self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "Rope_ref"]
+        self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('Rope_J')]
         self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
+
+        self.state_target_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "targetRope_ref"]
+        self.state_target_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('targetRope_J')]
+        self.state_target_rope_inds = self.state_target_rope_ref_inds + self.state_target_rope_rot_inds
 
         list_ctrl = get_name_arr_and_len(self.physics.named.data.ctrl, 0)[0]
 
-        self.ctrl_arm_indices = [idx for idx, s in enumerate(list_ctrl) if 'tj' in s]
-        self.ctrl_gripper_indices = [idx for idx, s in enumerate(list_ctrl) if 'tg' in s]
-        self.ctrl_rope_indices = [idx for idx, s in enumerate(list_ctrl) if 'tr' in s]
+        self.ctrl_arm_inds = [idx for idx, s in enumerate(list_ctrl) if 'tj' in s]
+        self.ctrl_gripper_inds = [idx for idx, s in enumerate(list_ctrl) if 'tg' in s]
+        self.ctrl_rope_inds = [idx for idx, s in enumerate(list_ctrl) if 'tr' in s]
 
+        list_geom = get_name_arr_and_len(self.physics.named.model.geom_rgba, 0)[0]
+        self.rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if s != 0 and s.startswith('Rope_G')]
+        self.target_rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if
+                                           s != 0 and s.startswith('targetRope_G')]
+        self.visualization_offset = 0.5
     def _distance_between_gripper_rope_ref(self):
-        return np.linalg.norm(self.physics.named.data.xpos['B7'] - self.physics.named.data.xpos['arm_gripper_base'],
-                              axis=-1)
+        return np.linalg.norm(
+            self.physics.named.data.xpos['Rope_B7'] - self.physics.named.data.xpos['arm_gripper_base'],
+            axis=-1)

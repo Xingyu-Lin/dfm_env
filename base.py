@@ -28,7 +28,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera'):
+                 default_camera_name='static_camera', visualization_mode=False):
 
         if model_path.startswith("/"):
             fullpath = model_path
@@ -38,6 +38,7 @@ class Base(GoalEnv):
             raise IOError("File %s does not exist" % fullpath)
 
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
+        self.visualization_mode = visualization_mode
         self.n_actions = n_actions
         self._init_configure()
         self.np_random = None
