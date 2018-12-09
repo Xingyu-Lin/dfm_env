@@ -6,17 +6,17 @@ from .utils.util import get_name_arr_and_len
 
 class RopeEnv(SawyerEnv):
     def __init__(self, **kwargs):
-        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', **kwargs)
+        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', distance_threshold=5e-2, **kwargs)
 
     def _get_obs(self):
         if self.use_visual_observation:
             obs = self.render(depth=False)
         else:
-            thetas = self.physics.data.qpos[self.state_rope_rot_inds]
+            # thetas = self.physics.data.qpos[self.state_rope_rot_inds]
             obs = np.concatenate((self.physics.data.qpos[self.state_arm_inds].copy(),
                                   self.physics.data.qpos[self.state_gripper_inds].copy(),
                                   self.physics.data.qpos[self.state_rope_ref_inds].copy(),
-                                  np.cos(thetas), np.sin(thetas), self.physics.data.qvel.copy()), axis=0)
+                                  self.physics.data.qpos[self.state_rope_rot_inds].copy(), self.physics.data.qvel.copy()), axis=0)
 
         if self.use_image_goal:
             assert False
@@ -35,7 +35,7 @@ class RopeEnv(SawyerEnv):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _init_configure(self):
-        self.boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.83, 0.88]]  # [min_val, max_val] for each of the dimension
+        self.boundary_range = [[-0.61, 0.5], [0.12, 0.85], [0.75, 0.88]]  # [min_val, max_val] for each of the dimension
         self.configure_indexes()
         n1 = len(self.state_arm_inds)
         n2 = len(self.state_gripper_inds)
@@ -98,7 +98,6 @@ class RopeEnv(SawyerEnv):
             # self.physics.data.qpos[self.state_target_rope_inds] = self.physics.data.qpos[self.state_rope_inds]
             # self.physics.data.qvel[self.state_target_rope_inds] = 0
         self.goal_state = self.get_target_goal_state()
-
         # Move gripper to somewhere faraway from the rope
         # self._move_gripper(gripper_target=[-0.80443307, 1.11125423, 1.08857343],
         #                    gripper_rotation=self.gripper_init_quat)
@@ -144,24 +143,23 @@ class RopeEnv(SawyerEnv):
 
     def _sample_rope_init_pos(self):
         # Sample one of the rope elements and put the gripper on top of it
-        list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
-        rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_B')]
-        sampled_idx = np.random.choice(rope_xpos_inds, 1)
+        # list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
+        # rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_B')]
+        sampled_idx = np.random.choice(self.rope_xpos_inds, 1)
         return self.physics.data.xpos[sampled_idx] + np.array([0, 0, 0.2])
 
     def get_target_goal_state(self):
-        # ref_pose = self.physics.data.qpos[self.state_target_rope_ref_inds[-4:]]
-        thetas = self.physics.data.qpos[self.state_target_rope_inds[7:]]
-        # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
-        # Only need to achieve the angles
-        return np.hstack([np.cos(thetas), np.sin(thetas)])
+        # thetas = self.physics.data.qpos[self.state_target_rope_inds[7:]]
+        # return np.hstack([np.cos(thetas), np.sin(thetas)])
+        return self.physics.data.xpos[self.target_rope_xpos_inds, :2].flatten().copy()
 
     def get_achieved_goal_state(self):
         # ref_pose = self.physics.data.qpos[self.state_rope_ref_inds[-4:]]
-        thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
+        # thetas = self.physics.data.qpos[self.state_rope_inds[7:]]
         # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
         # Only need to achieve the angles
-        return np.hstack([np.cos(thetas), np.sin(thetas)])
+        # return np.hstack([np.cos(thetas), np.sin(thetas)])
+        return self.physics.data.xpos[self.rope_xpos_inds, :2].flatten().copy()
 
     def configure_indexes(self):
         # Arm and gripper action joints
@@ -193,7 +191,11 @@ class RopeEnv(SawyerEnv):
         self.rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if s != 0 and s.startswith('Rope_G')]
         self.target_rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if
                                            s != 0 and s.startswith('targetRope_G')]
-        self.visualization_offset = 0.5
+
+        list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
+        self.rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
+        self.target_rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('targetRope_')]
+        self.visualization_offset = 0.1
     def _distance_between_gripper_rope_ref(self):
         return np.linalg.norm(
             self.physics.named.data.xpos['Rope_B7'] - self.physics.named.data.xpos['arm_gripper_base'],
