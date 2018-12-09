@@ -10,7 +10,7 @@ import random
 
 
 class SawyerEnv(Base, gym.utils.EzPickle):
-    def __init__(self, model_path, distance_threshold=1e-2, distance_threshold_obs=0,
+    def __init__(self, model_path, distance_threshold, distance_threshold_obs=0,
                  n_substeps=20, horizon=200, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,

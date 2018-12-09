@@ -5,8 +5,8 @@ from .utils.util import get_name_arr_and_len
 
 
 class RopeEnv(SawyerEnv):
-    def __init__(self, **kwargs):
-        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', distance_threshold=5e-2, **kwargs)
+    def __init__(self, distance_threshold=5e-2, **kwargs):
+        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', distance_threshold=distance_threshold, **kwargs)
 
     def _get_obs(self):
         if self.use_visual_observation:

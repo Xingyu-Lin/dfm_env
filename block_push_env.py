@@ -5,8 +5,8 @@ from .utils.util import get_name_arr_and_len
 
 
 class BlockPushEnv(SawyerEnv):
-    def __init__(self, **kwargs):
-        super(BlockPushEnv, self).__init__(model_path='tasks/block.xml', distance_threshold=1e-2, **kwargs)
+    def __init__(self, distance_threshold=5e-2, **kwargs):
+        super(BlockPushEnv, self).__init__(model_path='tasks/block.xml', distance_threshold=distance_threshold, **kwargs)
 
     # Implementation of functions from GoalEnvExt
     # ----------------------------
