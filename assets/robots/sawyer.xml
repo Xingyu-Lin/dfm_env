@@ -292,17 +292,15 @@
 		<motor joint='gripper_jl' name='tg0' ctrllimited='false'/>
 
 		<!--  ================= Position actuators ================= /-->
-		<!--
-		<position joint='arm_j0' 	name='pj0' kp='1e5' ctrlrange='-3.0503 3.0503'/>
-		<position joint='arm_j1' 	name='pj1' kp='1e5' ctrlrange='-3.8095 2.2736'/>
-		<position joint='arm_j2' 	name='pj2' kp='1e5' ctrlrange='-3.0426 3.0426'/>
-		<position joint='arm_j3' 	name='pj3' kp='2e4' ctrlrange='-3.0439 3.0439'/>
-		<position joint='arm_j4' 	name='pj4' kp='2e4' ctrlrange='-2.9761 2.9761'/>
-		<position joint='arm_j5' 	name='pj5' kp='1e3' ctrlrange='-2.9761 2.9761'/>
-		<position joint='arm_j6' 	name='pj6' kp='1e3' ctrlrange='-4.7124 4.7124'/>
-		<position joint='gripper_jr' 	name='pg1' kp='1000' ctrlrange='-0.05 0'/>
-		<position joint='gripper_jl' 	name='pg0' kp='2000' ctrlrange='0 0.05'/>
-		-->
+		<!--<position joint='arm_j0' 	name='pj0' kp='1e5' ctrlrange='-3.0503 3.0503'/>-->
+		<!--<position joint='arm_j1' 	name='pj1' kp='1e5' ctrlrange='-3.8095 2.2736'/>-->
+		<!--<position joint='arm_j2' 	name='pj2' kp='1e5' ctrlrange='-3.0426 3.0426'/>-->
+		<!--<position joint='arm_j3' 	name='pj3' kp='2e4' ctrlrange='-3.0439 3.0439'/>-->
+		<!--<position joint='arm_j4' 	name='pj4' kp='2e4' ctrlrange='-2.9761 2.9761'/>-->
+		<!--<position joint='arm_j5' 	name='pj5' kp='1e3' ctrlrange='-2.9761 2.9761'/>-->
+		<!--<position joint='arm_j6' 	name='pj6' kp='1e3' ctrlrange='-4.7124 4.7124'/>-->
+		<!--<position joint='gripper_jr' 	name='pg1' kp='1000' ctrlrange='-0.05 0'/>-->
+		<!--<position joint='gripper_jl' 	name='pg0' kp='2000' ctrlrange='0 0.05'/>-->
 	</actuator>
 
 	<!--  ================= Sensors ================= /-->
