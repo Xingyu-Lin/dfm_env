@@ -5,8 +5,13 @@ from .utils.util import get_name_arr_and_len
 
 
 class RopeEnv(SawyerEnv):
-    def __init__(self, distance_threshold=5e-2, **kwargs):
-        super(RopeEnv, self).__init__(model_path='tasks/rope_temp.xml', distance_threshold=distance_threshold, **kwargs)
+    def __init__(self, distance_threshold=5e-2, fix_gripper=True, **kwargs):
+        if fix_gripper:
+            model_path = 'tasks/rope_temp.xml'
+        else:
+            model_path = 'tasks/rope_gripper_temp.xml'
+        super(RopeEnv, self).__init__(model_path=model_path, distance_threshold=distance_threshold,
+                                      fix_gripper=fix_gripper, **kwargs)
 
     def _get_obs(self):
         if self.use_visual_observation:
@@ -16,7 +21,8 @@ class RopeEnv(SawyerEnv):
             obs = np.concatenate((self.physics.data.qpos[self.state_arm_inds].copy(),
                                   self.physics.data.qpos[self.state_gripper_inds].copy(),
                                   self.physics.data.qpos[self.state_rope_ref_inds].copy(),
-                                  self.physics.data.qpos[self.state_rope_rot_inds].copy(), self.physics.data.qvel.copy()), axis=0)
+                                  self.physics.data.qpos[self.state_rope_rot_inds].copy(),
+                                  self.physics.data.qvel.copy()), axis=0)
 
         if self.use_image_goal:
             assert False
@@ -51,7 +57,10 @@ class RopeEnv(SawyerEnv):
 
         init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
         # init_gripper_qpos = self.physics.data.qpos[self.state_gripper_inds]
-        init_gripper_qpos = np.zeros((2,))
+        if self.fix_gripper:
+            init_gripper_qpos = np.zeros((0,))
+        else:
+            init_gripper_qpos = np.zeros((2,))
         self.init_indexes = self.state_arm_inds + self.state_gripper_inds + self.state_rope_ref_inds + self.state_rope_rot_inds
         self.init_qpos = np.hstack([init_arm_qpos, init_gripper_qpos, init_state_rope_ref, np.zeros(n3)])
         self.init_qvel = np.zeros(len(self.init_indexes), )
@@ -94,9 +103,9 @@ class RopeEnv(SawyerEnv):
                 self.physics.data.qpos[self.state_target_rope_ref_inds[1]] -= self.visualization_offset
                 self.physics.model.geom_rgba[self.target_rope_geom_rgba_inds, 3] = target_original_transparancy
                 self.physics.model.geom_rgba[self.rope_geom_rgba_inds, 3] = 1.
-            # Set the target qpos
-            # self.physics.data.qpos[self.state_target_rope_inds] = self.physics.data.qpos[self.state_rope_inds]
-            # self.physics.data.qvel[self.state_target_rope_inds] = 0
+                # Set the target qpos
+                # self.physics.data.qpos[self.state_target_rope_inds] = self.physics.data.qpos[self.state_rope_inds]
+                # self.physics.data.qvel[self.state_target_rope_inds] = 0
         self.goal_state = self.get_target_goal_state()
         # Move gripper to somewhere faraway from the rope
         # self._move_gripper(gripper_target=[-0.80443307, 1.11125423, 1.08857343],
@@ -196,6 +205,7 @@ class RopeEnv(SawyerEnv):
         self.rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
         self.target_rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('targetRope_')]
         self.visualization_offset = 0.1
+
     def _distance_between_gripper_rope_ref(self):
         return np.linalg.norm(
             self.physics.named.data.xpos['Rope_B7'] - self.physics.named.data.xpos['arm_gripper_base'],

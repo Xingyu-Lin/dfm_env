@@ -8,7 +8,7 @@
 
 
     <include file="./dfm_env/assets/scenes/scene.xml"/>
-    <include file="./dfm_env/assets/robots/sawyer.xml"/>
+    <include file="./dfm_env/assets/robots/sawyer_gripper.xml"/>
 
     <worldbody>
 

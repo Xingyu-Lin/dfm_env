@@ -187,7 +187,7 @@
                                                     </body>-->
                                                     <body name='finger_l' pos='0 -0.0015 0.02'>
                                                         <inertial pos='0 0 0' quat='0 0 0 -1' mass='0.02' diaginertia='0.01 0.01 0.01' />
-                                                        <!--<joint name='gripper_jl' pos='0 0 0' axis='0 1 0' type='slide' range='0 0.020833' springdamper='0.08 6' limited='true'/>-->
+                                                        <joint name='gripper_jl' pos='0 0 0' axis='0 1 0' type='slide' range='0 0.020833' springdamper='0.08 6' limited='true'/>
                                                         <geom class='viz' mesh='extended_narrow' euler='1.57 1.57 0' rgba='0.1 0.1 0.1 1'/>
                                                         <geom size='0.005 0.00675 0.05635' pos='0 0.01725 0.0615' quat='0 0 0 -1' type='box' rgba='0.1 0.1 0.1 1'/>
                                                         <geom size='0.005 0.025 0.0085' pos='-0.005 -0.003 0.0083' quat='0 0 0 -1' type='box' rgba='0.1 0.1 0.1 1'/>
@@ -225,7 +225,7 @@
                                                     </body>
                                                     <body name='finger_r' pos='0 0.0015 0.02'>
                                                         <inertial pos='0 0 0' mass='0.02' diaginertia='0.01 0.01 0.01' />
-                                                        <!--<joint name='gripper_jr' pos='0 0 0' axis='0 1 0' type='slide' range='-0.020833 0' springdamper='0.08 6' limited='true'/>-->
+                                                        <joint name='gripper_jr' pos='0 0 0' axis='0 1 0' type='slide' range='-0.020833 0' springdamper='0.08 6' limited='true'/>
                                                         <geom class='viz' mesh='extended_narrow' euler='1.57 -1.57 0' rgba='0.1 0.1 0.1 1'/>
                                                         <geom size='0.005 0.00675 0.05635' pos='0 -0.01725 0.0615' type='box' rgba='0.1 0.1 0.1 1'/>
                                                         <geom size='0.005 0.025 0.0085' pos='0.005 0.003 0.0083' type='box' rgba='0.1 0.1 0.1 1'/>
@@ -275,9 +275,9 @@
     </worldbody>
 
 	<!--  ================= Constraints ================= /-->
-	<!--<equality>-->
-		<!--<joint joint1='gripper_jl' joint2='gripper_jr' polycoef='0 -1 0 0 0' solimp="0.99 0.999 0.001" solref="0.01 1"/>-->
-	<!--</equality>-->
+	<equality>
+		<joint joint1='gripper_jl' joint2='gripper_jr' polycoef='0 -1 0 0 0' solimp="0.99 0.999 0.001" solref="0.01 1"/>
+	</equality>
 
 	<!--  ================= Actuators ================= /-->
 	<actuator>
@@ -289,7 +289,7 @@
 		<motor joint='arm_j4' name='tj4' ctrllimited='false'/>
 		<motor joint='arm_j5' name='tj5' ctrllimited='false'/>
 		<motor joint='arm_j6' name='tj6' ctrllimited='false'/>
-		<!--<motor joint='gripper_jl' name='tg0' ctrllimited='false'/>-->
+		<motor joint='gripper_jl' name='tg0' ctrllimited='false'/>
 
 		<!--  ================= Position actuators ================= /-->
 		<!--<position joint='arm_j0' 	name='pj0' kp='1e5' ctrlrange='-3.0503 3.0503'/>-->

@@ -130,8 +130,8 @@ class SawyerEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_pos[0, :3] += ctrl[:3]
             if not self.fix_gripper:
                 self.physics.data.ctrl[self.ctrl_gripper_indices] = ctrl[3:]
-            else:
-                self.physics.named.data.qpos[self.state_gripper_inds] = 0
+            # else:
+            #     self.physics.named.data.qpos[self.state_gripper_inds] = 0
             # print(self._distance_between_gripper_rope_ref())
             # if self._distance_between_gripper_rope_ref() > 0.4 :
             #     self.gripper_init_pos = self._sample_rope_init_pos()
