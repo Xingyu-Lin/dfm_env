@@ -15,7 +15,7 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                  with_goal=False,
                  use_visual_observation=True,
                  use_image_goal=True,
-                 use_true_reward=False, use_dof='both', fix_gripper=True, ** kwargs):
+                 use_true_reward=False, use_dof='both', fix_gripper=True, **kwargs):
         '''
 
         :param model_path:
@@ -65,8 +65,8 @@ class SawyerEnv(Base, gym.utils.EzPickle):
         """
 
         if (self.physics.model.eq_type is None or
-          self.physics.model.eq_obj1id is None or
-          self.physics.model.eq_obj2id is None):
+                    self.physics.model.eq_obj1id is None or
+                    self.physics.model.eq_obj2id is None):
             return
 
         for eq_type, obj1_id, obj2_id in zip(self.physics.model.eq_type,
@@ -123,6 +123,7 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                 self.physics.data.qvel[self.action_gripper_inds] = ctrl
         elif self.action_type == 'mocap':
             ctrl = self._apply_mocap_boundary(ctrl)
+            # print('mocap pos:', self.physics.data.mocap_pos[0][:])
             # ctrl[2] = 0
             # if self.time_step % 50 == 0:
             #     self.reset_mocap2body_xpos()
@@ -130,17 +131,25 @@ class SawyerEnv(Base, gym.utils.EzPickle):
             self.physics.data.mocap_pos[0, :3] += ctrl[:3]
             if not self.fix_gripper:
                 self.physics.data.ctrl[self.ctrl_gripper_indices] = ctrl[3:]
-            # else:
-            #     self.physics.named.data.qpos[self.state_gripper_inds] = 0
-            # print(self._distance_between_gripper_rope_ref())
-            # if self._distance_between_gripper_rope_ref() > 0.4 :
-            #     self.gripper_init_pos = self._sample_rope_init_pos()
-            #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+                # else:
+                #     self.physics.named.data.qpos[self.state_gripper_inds] = 0
+                # print(self._distance_between_gripper_rope_ref())
+                # if self._distance_between_gripper_rope_ref() > 0.4 :
+                #     self.gripper_init_pos = self._sample_rope_init_pos()
+                #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
-    def _move_gripper(self, gripper_target, gripper_rotation):
+    def _move_gripper(self, gripper_target, gripper_rotation=None):
         self.physics.data.mocap_pos[0][:] = gripper_target
-        self.physics.data.mocap_quat[0][:] = gripper_rotation
-        for _ in range(500):
+        if gripper_rotation is not None:
+            self.physics.data.mocap_quat[0][:] = gripper_rotation
+        prev_dist = 10000
+        while True:
+            cur_dist = self._get_gripper_mocap_distance(gripper_target)
             self.physics.step()
+            if np.abs(cur_dist - prev_dist) < 1e-5:
+                return
+            prev_dist = cur_dist
 
-
+    def _get_gripper_mocap_distance(self, gripper_target):
+        gripper_base_xpos = self.physics.named.data.xpos['arm_gripper_base']
+        return np.linalg.norm(gripper_base_xpos - gripper_target)
