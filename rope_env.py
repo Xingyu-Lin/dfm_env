@@ -1,8 +1,7 @@
 # Created by Xingyu Lin, 2018/12/6
 import numpy as np
 from dfm_env.sawyer_env import SawyerEnv
-from .utils.util import get_name_arr_and_len
-
+from .utils.util import get_name_arr_and_len, ignored_physics_warning
 
 class RopeEnv(SawyerEnv):
     def __init__(self, distance_threshold=5e-2, fix_gripper=True,
@@ -210,10 +209,15 @@ class RopeEnv(SawyerEnv):
     def _sample_rope_neighbourhood(self):
         # Sample one of the rope elements and put the gripper on top of it
         sampled_idx = np.random.choice(self.rope_xpos_inds, 1)
-        point = self.physics.data.xpos[sampled_idx][0]
-        point[:2] += (np.random.random(2, ) - 0.5) / 4
-        point[2] = self.boundary_range[2][0]  # Account for the height of the gripper
-        return point
+        point_start = self.physics.data.xpos[sampled_idx][0].copy()
+        point_end = point_start.copy()
+        delta_xy = (np.random.random(2, ) - 0.5)
+        delta_xy /= [2., 3.]
+        point_start[:2] += delta_xy
+        point_end[:2] -= delta_xy
+        point_start[2] = self.boundary_range[2][0]  # Account for the height of the gripper
+        point_end[2] = self.boundary_range[2][0]  # Account for the height of the gripper
+        return point_start, point_end
 
     def _random_rope_motion(self):
         """Samples a random rope motor and physics steps to get new goal position.
@@ -236,23 +240,27 @@ class RopeEnv(SawyerEnv):
         # init_rope_qpos = self.physics.data.qpos[self.state_rope_inds]
         init_rope_state = self.get_achieved_goal_state()
         while True:
-            start_pt = self._sample_rope_neighbourhood()
-            end_pt = self._sample_rope_neighbourhood()
+            start_pt, end_pt = self._sample_rope_neighbourhood()
             # Account for the height of the gripper
-            self._move_gripper(start_pt)
-            self._move_gripper(end_pt)
-            for _ in range(100):
-                self.physics.step()  # Wait for rope to stablize
+            self._move_gripper(start_pt, render=True, verbose=True)
+            # end_pt[2] = self.physics.named.data.xpos['arm_gripper_base'][2]
+            self._move_gripper(end_pt, render=True, verbose=True)
+            print('two points:', start_pt, end_pt)
+            with ignored_physics_warning():
+                for _ in range(200):
+                    self.physics.step()  # Wait for rope to stablize
             cur_rope_state = self.get_achieved_goal_state()
             distance = np.linalg.norm(init_rope_state - cur_rope_state)
-            if 5e-2 < distance < 3:
+            print(distance)
+            if 1e-1 < distance < 3:
                 # Set the target rope qpos and reset the rope qpos
                 # self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
                 target_rope_qpos = self.physics.data.qpos[self.state_rope_inds].copy()
                 self.physics.data.qpos[self.init_indexes] = self.init_qpos
                 self.physics.data.qvel[self.init_indexes] = self.init_qvel
                 self.physics.data.qpos[self.state_target_rope_inds] = target_rope_qpos
-                self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+                # self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
+                self._move_gripper(gripper_target=end_pt, gripper_rotation=self.gripper_init_quat)
                 return
             else:
                 self.physics.data.qpos[self.init_indexes] = self.init_qpos

@@ -3,10 +3,10 @@ import gym
 import numpy as np
 
 from .base import Base
-from .utils.util import get_name_arr_and_len
+from .utils.util import get_name_arr_and_len, ignored_physics_warning
 from dm_control import mujoco
 from dm_control.suite import base
-import random
+import cv2 as cv
 
 
 class SawyerEnv(Base, gym.utils.EzPickle):
@@ -138,17 +138,31 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                 #     self.gripper_init_pos = self._sample_rope_init_pos()
                 #     self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
 
-    def _move_gripper(self, gripper_target, gripper_rotation=None):
+    def _move_gripper(self, gripper_target, gripper_rotation=None, verbose=False, render=False):
         self.physics.data.mocap_pos[0][:] = gripper_target
         if gripper_rotation is not None:
             self.physics.data.mocap_quat[0][:] = gripper_rotation
         prev_dist = 10000
         while True:
+            if render:
+                img = self.physics.render(camera_id='static_camera')
+                img = img[:, :, (2, 1, 0)] / 256.
+                cv.imshow('display', img)
+
+                cv.waitKey(10)
             cur_dist = self._get_gripper_mocap_distance(gripper_target)
-            self.physics.step()
+            # if verbose:
+            #     print('dist:', cur_dist, prev_dist)
+            with ignored_physics_warning():
+                self.physics.step()
+
             if np.abs(cur_dist - prev_dist) < 1e-5:
+                # if verbose:
+                #     print('_move_gripper:: end')
                 return
             prev_dist = cur_dist
+            if verbose:
+                print('_move_gripper:: gripper location:',self.physics.named.data.xpos['arm_gripper_base'])
 
     def _get_gripper_mocap_distance(self, gripper_target):
         gripper_base_xpos = self.physics.named.data.xpos['arm_gripper_base']

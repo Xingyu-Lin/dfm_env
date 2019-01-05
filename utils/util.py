@@ -2,6 +2,11 @@
 import numpy as np
 import xml.etree.ElementTree as ET
 import re
+from termcolor import colored
+from contextlib import contextmanager
+from dm_control.rl.control import PhysicsError
+
+
 def get_name_arr_and_len(field_indexer, dim_idx):
     """Returns a string array of element names and the max name length."""
     axis = field_indexer._axes[dim_idx]
@@ -19,6 +24,7 @@ def get_name_arr_and_len(field_indexer, dim_idx):
         name_len = 0
     return name_arr, name_len
 
+
 def add_rope_actuators(xml_path):
     """Writes XML file with actuators added for rope joints"""
     tree = ET.parse(xml_path)
@@ -29,21 +35,27 @@ def add_rope_actuators(xml_path):
     actuator_ele = doc.find('actuator')
 
     for i in range(count):
-        if i == int(count/2):
+        if i == int(count / 2):
             continue
 
-        motor_name = 'tr' + str(2*i)
+        motor_name = 'tr' + str(2 * i)
         joint_name = 'J0_' + str(i)
         joint1 = ET.Element("motor", ctrllimited="false", name=motor_name, joint=joint_name)
 
-        motor_name = 'tr' + str(2*i + 1)
+        motor_name = 'tr' + str(2 * i + 1)
         joint_name = 'J1_' + str(i)
-        joint2 = ET.Element("motor", ctrllimited="false", name=motor_name, joint=joint_name )
+        joint2 = ET.Element("motor", ctrllimited="false", name=motor_name, joint=joint_name)
 
         actuator_ele.append(joint1)
         actuator_ele.append(joint2)
 
-    tree.write(xml_path.split('.')[0] + '_temp.xml',encoding='utf8')
+    tree.write(xml_path.split('.')[0] + '_temp.xml', encoding='utf8')
     return
 
 
+@contextmanager
+def ignored_physics_warning():
+    try:
+        yield
+    except PhysicsError as ex:
+        print(colored(ex, 'red'))

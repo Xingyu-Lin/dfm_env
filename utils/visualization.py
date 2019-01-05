@@ -19,6 +19,7 @@ class ViewerWrapper(object):
         obs, reward, done, info = self.env.step(action)
         self.time_count +=1
         if self.time_count == self.T:
+            print('reward: ', reward)
             return TimeStep(StepType.LAST, reward, 1.0, obs)
         else:
             return TimeStep(StepType.MID, reward, 1.0, obs)
