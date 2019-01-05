@@ -5,6 +5,7 @@ import re
 from termcolor import colored
 from contextlib import contextmanager
 from dm_control.rl.control import PhysicsError
+import cv2 as cv
 
 
 def get_name_arr_and_len(field_indexer, dim_idx):
@@ -59,3 +60,10 @@ def ignored_physics_warning():
         yield
     except PhysicsError as ex:
         print(colored(ex, 'red'))
+
+
+def cv_render(img, name='display'):
+    '''Take an image in ndarray format and show it with opencv. '''
+    img = img[:, :, (2, 1, 0)] / 256.
+    cv.imshow(name, img)
+    cv.waitKey(10)

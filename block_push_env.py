@@ -120,7 +120,7 @@ class BlockPushEnv(SawyerEnv):
         self.state_arm_inds = [idx for idx, s in enumerate(list_qpos) if 'arm_' in s]
         self.state_gripper_inds = [idx for idx, s in enumerate(list_qpos) if 'gripper' in s]
         self.state_block_all_inds = [idx for idx, s in enumerate(list_qpos) if 'j_block' in s]
-        self.state_block_inds = self.state_block_all_inds[:3]  # Only the pose and ignore the position
+        self.state_block_inds = self.state_block_all_inds[:3]  # Only the position and ignore the pose
 
         list_site_xpos = get_name_arr_and_len(self.physics.named.model.body_pos, 0)[0]
 

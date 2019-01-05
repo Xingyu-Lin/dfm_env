@@ -11,6 +11,13 @@
     <include file="./dfm_env/assets/robots/sawyer.xml"/>
 
     <worldbody>
+        <body name="pushBlock" pos="-0.15 0 0.72">
+            <!--<freejoint name="push_block_slide"/>-->
+            <joint axis="1 0 0" damping="0.001" name="push_block_slide0" pos="0 0 0" type="slide"/>
+            <joint axis="0 1 0" damping="0.001" name="push_block_slide1" pos="0 0 0" type="slide"/>
+            <joint axis="0 0 1" damping="0.001" name="push_block_slide2" pos="0 0 0" type="slide"/>
+            <geom size="0.025 0.025 0.025" type="box" name="object0" material="block_mat" mass="50000"></geom>
+        </body>
 
         <body name="Rope_B7" pos="-0.15 0.5 0.72">
             <freejoint name="Rope_ref"/>
@@ -24,7 +31,7 @@
             <freejoint name="targetRope_ref"/>
             <composite prefix='targetRope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
-                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2' />
+                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2'/>
             </composite>
         </body>
 
@@ -35,7 +42,6 @@
     </equality>
 
     <actuator>
-
         <motor ctrllimited="false" joint="Rope_J0_0" name="tr0"/>
         <motor ctrllimited="false" joint="Rope_J1_0" name="tr1"/>
         <motor ctrllimited="false" joint="Rope_J0_1" name="tr2"/>
