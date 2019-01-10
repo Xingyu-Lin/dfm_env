@@ -4,7 +4,7 @@ from dm_control import mujoco
 
 
 class ViewerWrapper(object):
-    def __init__(self, env, eval_params={'T':10000}):
+    def __init__(self, env, eval_params={'T': 10000}):
         self.env = env
         self.physics = self.env.physics
         self.T = eval_params['T']
@@ -17,7 +17,7 @@ class ViewerWrapper(object):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        self.time_count +=1
+        self.time_count += 1
         if self.time_count == self.T:
             print('reward: ', reward)
             return TimeStep(StepType.LAST, reward, 1.0, obs)
@@ -29,7 +29,7 @@ class ViewerWrapper(object):
         return mujoco.action_spec(self.env.physics)
 
 
-def ViewerPolicyWrapper(ddpg_policy,  eval_params):
+def ViewerPolicyWrapper(ddpg_policy, eval_params):
     '''
     policy: An optional callable corresponding to a policy to execute
         within the environment. It should accept a `TimeStep` and return
@@ -40,10 +40,10 @@ def ViewerPolicyWrapper(ddpg_policy,  eval_params):
     def dm_policy(time_step=None):
         obs = time_step[3]
         action = ddpg_policy.get_actions(obs['observation'], obs['achieved_goal'], obs['desired_goal'],
-                                       compute_Q=False,
-                                       noise_eps=eval_params['noise_eps'] if not eval_params['exploit'] else 0.,
-                                       random_eps=eval_params['random_eps'] if not eval_params['exploit'] else 0.,
-                                       use_target_net=eval_params['use_target_net'])
+                                         compute_Q=False,
+                                         noise_eps=eval_params['noise_eps'] if not eval_params['exploit'] else 0.,
+                                         random_eps=eval_params['random_eps'] if not eval_params['exploit'] else 0.,
+                                         use_target_net=eval_params['use_target_net'])
         # print('action:', action)
         return action
 

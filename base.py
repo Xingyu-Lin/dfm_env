@@ -18,7 +18,6 @@ from termcolor import colored
 import cv2 as cv
 import copy
 
-
 class Base(GoalEnv):
     '''
     Base class for all dm_control based, goal oriented environments.
@@ -38,6 +37,7 @@ class Base(GoalEnv):
             raise IOError("File %s does not exist" % fullpath)
 
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
+
         self.visualization_mode = visualization_mode
         self.n_actions = n_actions
         self._init_configure()
@@ -79,7 +79,6 @@ class Base(GoalEnv):
 
         self.action_space = spaces.Box(-1, 1, shape=(self.n_actions,), dtype='float32')
         obs = self.reset()
-
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
             achieved_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
@@ -249,12 +248,13 @@ class Base(GoalEnv):
         action = np.clip(action, self.action_space.low, self.action_space.high)
         if self.use_auxiliary_loss:
             prev_frame = self.render()
-            self._set_action(action)
-            try:
-                for _ in range(self.n_substeps):
-                    self.physics.step()
-            except PhysicsError as ex:
-                print(colored(ex, 'red'))
+            ret = self._set_action(action)
+            if ret != 'env_no_step':
+                try:
+                    for _ in range(self.n_substeps):
+                        self.physics.step()
+                except PhysicsError as ex:
+                    print(colored(ex, 'red'))
             self._step_callback()
             obs = self._get_obs()
             next_frame = self.render()
@@ -267,12 +267,13 @@ class Base(GoalEnv):
                 'transformation': transformation
             }
         else:
-            self._set_action(action)
-            try:
-                for _ in range(self.n_substeps):
-                    self.physics.step()
-            except PhysicsError as ex:
-                print(colored(ex, 'red'))
+            ret = self._set_action(action)
+            if ret != 'env_no_step':
+                try:
+                    for _ in range(self.n_substeps):
+                        self.physics.step()
+                except PhysicsError as ex:
+                    print(colored(ex, 'red'))
             self._step_callback()
             obs = self._get_obs()
             aug_info = {}

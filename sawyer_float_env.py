@@ -16,8 +16,8 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                  use_visual_observation=True,
                  use_image_goal=True,
                  use_true_reward=False,
-                 arm_height=0.85,  # TODO Check this later
-                 arm_move_velocity=0.5,
+                 arm_height=0.88,
+                 arm_move_velocity=0.15,
                  **kwargs):
         '''
 
@@ -37,10 +37,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         Base class for sawyer manipulation environments
         '''
         self.action_type = action_type
+        self.arm_move_velocity = arm_move_velocity
+        self.arm_height = arm_height
         if action_type == 'endpoints':
             n_actions = 4
-            self.arm_height = arm_height
-            self.arm_move_velocity = arm_move_velocity
+            self.prev_action_finished = True
         elif action_type == 'velocity':
             n_actions = 3
         else:
@@ -57,25 +58,33 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _set_action(self, ctrl):
-        # self.physics.data.qvel[:] = np.zeros(shape=len(self.physics.data.qvel[:]))
-        # return
         assert len(ctrl) == self.n_actions
         if self.action_type == 'velocity':
             ctrl /= self.n_substeps
             self._set_arm_velocity(ctrl)
-        elif self.action_type == 'mocap':
+        elif self.action_type == 'endpoints':
             point_st = self._apply_endpoint_boundary(ctrl[:2])
-            point_en = self._apply_endpoint_boundary(ctrl[3:])
-            point_st.append()
+            point_en = self._apply_endpoint_boundary(ctrl[2:])
+            point_st = np.append(point_st, self.arm_height)
+            point_en = np.append(point_en, self.arm_height)
             self._move_arm_by_endpoints(point_st, point_en)
+        elif self.action_type == 'endpoints_visualization':
+            if self.prev_action_finished:
+                point_st = self._apply_endpoint_boundary(ctrl[:2])
+                point_en = self._apply_endpoint_boundary(ctrl[2:])
+                self.prev_point_st = np.append(point_st, self.arm_height)
+                self.prev_point_en = np.append(point_en, self.arm_height)
+            self._move_arm_by_endpoints_one_step(self.prev_point_st, self.prev_point_en)
+
+        return 'env_no_step'
 
     def _get_obs(self):
         if self.use_visual_observation:
-            obs = self.render(depth=False)
+            obs = self.render(depth=False, width=self.image_size, height=self.image_size, )
         else:
             # thetas = self.physics.data.qpos[self.state_rope_rot_inds]
-            obs = np.concatenate((self.physics.data.qpos[self.state_rope_ref_inds].copy(),
-                                  self.physics.data.qpos[self.state_rope_rot_inds].copy()), axis=0)
+            obs = np.concatenate((self.physics.data.qpos[self.qpos_rope_ref_inds].copy(),
+                                  self.physics.data.qpos[self.qpos_rope_rot_inds].copy()), axis=0)
 
         if self.use_image_goal:
             assert False
@@ -101,14 +110,14 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         # qpos index for arm, gripper and rope
         list_qpos = get_name_arr_and_len(self.physics.named.data.qpos, 0)[0]
-        self.state_arm_inds = [idx for idx, s in enumerate(list_qpos) if 'arm_slide' in s]
-        self.state_gripper_inds = [idx for idx, s in enumerate(list_qpos) if 'gripper' in s]
-        self.state_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "Rope_ref"]
-        self.state_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('Rope_J')]
-        self.state_rope_inds = self.state_rope_ref_inds + self.state_rope_rot_inds
-        self.state_target_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "targetRope_ref"]
-        self.state_target_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('targetRope_J')]
-        self.state_target_rope_inds = self.state_target_rope_ref_inds + self.state_target_rope_rot_inds
+        self.qpos_arm_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('arm_slide')]
+        self.qpos_gripper_inds = [idx for idx, s in enumerate(list_qpos) if 'gripper' in s]
+        self.qpos_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "Rope_ref"]
+        self.qpos_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('Rope_J')]
+        self.qpos_rope_inds = self.qpos_rope_ref_inds + self.qpos_rope_rot_inds
+        self.qpos_target_rope_ref_inds = [idx for idx, s in enumerate(list_qpos) if s == "targetRope_ref"]
+        self.qpos_target_rope_rot_inds = [idx for idx, s in enumerate(list_qpos) if s.startswith('targetRope_J')]
+        self.qpos_target_rope_inds = self.qpos_target_rope_ref_inds + self.qpos_target_rope_rot_inds
         # self.state_push_block_inds = [idx for idx, s in enumerate(list_qpos) if 'push_block_slide' in s]
         # self.state_push_block_inds = self.state_push_block_inds[:2]
 
@@ -118,35 +127,45 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.ctrl_rope_inds = [idx for idx, s in enumerate(list_ctrl) if 'tr' in s]
 
         list_geom = get_name_arr_and_len(self.physics.named.model.geom_rgba, 0)[0]
-        self.rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if s != 0 and s.startswith('Rope_G')]
-        self.target_rope_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if
+        self.geom_rgba_rope_inds = [idx for idx, s in enumerate(list_geom) if s != 0 and s.startswith('Rope_G')]
+        self.geom_rgba_target_rope_inds = [idx for idx, s in enumerate(list_geom) if
                                            s != 0 and s.startswith('targetRope_G')]
         # self.push_block_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if
         #                                   s != 0 and s.startswith('pushBlock_G')]
 
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
-        self.rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
-        self.target_rope_xpos_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('targetRope_')]
+        self.xpos_arm_inds = [idx for idx, s in enumerate(list_xpos) if s == 'arm_l6']
+        self.xpos_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
+        self.xpos_target_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('targetRope_')]
         self.visualization_offset = 0.1
 
     def _init_configure(self):
         self.boundary_range = [[-0.61, 0.5], [0.12, 0.85]]  # [min_val, max_val] for each of the dimension
         self.configure_indexes()
-        n1 = len(self.state_arm_inds)
-        n2 = len(self.state_gripper_inds)
-        n3 = len(self.state_rope_rot_inds)
+        n1 = len(self.qpos_arm_inds)
+        n2 = len(self.qpos_gripper_inds)
+        n3 = len(self.qpos_rope_rot_inds)
         init_state_rope_ref = [-0.15, 0.5, 0.705, 1, 0, 0, 0]
 
-        self.arm_init_pos = self._sample_rope_init_pos()
-
+        self.init_arm_xpos = self._sample_rope_init_xpos()
         # self.arm_init_quat = [0, 1, 0, 0]
         self.physics.data.ctrl[:] = np.zeros(len(self.physics.data.ctrl))
+        self.set_arm_location(self.init_arm_xpos)
 
-        self.set_arm_location(self.arm_init_pos)
-        init_arm_qpos = self.physics.data.qpos[self.state_arm_inds]
-        self.init_indexes = self.state_arm_inds + self.state_rope_ref_inds + self.state_rope_rot_inds
+        init_arm_qpos = self.init_arm_xpos.squeeze()
+        self.init_qpos_indexes = self.qpos_arm_inds + self.qpos_rope_ref_inds + self.qpos_rope_rot_inds
         self.init_qpos = np.hstack([init_arm_qpos, init_state_rope_ref, np.zeros(n3)])
-        self.init_qvel = np.zeros(len(self.init_indexes), )
+
+        self.init_qvel = np.zeros(len(self.init_qpos_indexes), )
+
+    def _reset_all_to_init_pos(self):
+        self.physics.data.qpos[self.init_qpos_indexes] = self.init_qpos
+        self.physics.data.qvel[self.init_qpos_indexes] = self.init_qvel
+        self.physics.forward()
+
+    def _sample_rope_init_xpos(self):
+        # Implemented by rope env
+        pass
 
     def get_current_info(self):
         """
@@ -166,23 +185,26 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         return point
 
     def get_arm_location(self):
-        return self.physics.data.qpos[self.state_arm_inds]
+        return self.physics.data.qpos[self.qpos_arm_inds]
 
     def set_arm_location(self, arm_location):
-        self.physics.data.qpos[self.state_arm_inds] = arm_location
+        self.physics.data.qpos[self.qpos_arm_inds] = arm_location
 
     def _set_arm_velocity(self, arm_velocity):
-        self.physics.data.qvel[self.state_arm_inds] = arm_velocity
+        self.physics.data.qvel[self.qpos_arm_inds] = arm_velocity
 
     def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False):
         # Move the arm from the start loc to the end loc
         if velocity is None:
             velocity = self.arm_move_velocity
         self.set_arm_location(arm_st_loc)
-        move_dir = (arm_en_loc - arm_st_loc) * np.linalg.norm((arm_en_loc - arm_st_loc))
-        self._set_arm_velocity(move_dir * velocity)
+        move_dir = (arm_en_loc - arm_st_loc) / np.linalg.norm((arm_en_loc - arm_st_loc))
+
         prev_dist = 10000
+        cnt = 0
+
         while True:
+            self._set_arm_velocity(move_dir * velocity)
             if render:
                 img = self.physics.render(camera_id='static_camera')
                 cv_render(img)
@@ -192,11 +214,31 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             if cur_dist > prev_dist:
                 break
             prev_dist = cur_dist
+            cnt += 1
+
+    def _move_arm_by_endpoints_one_step(self, arm_st_loc, arm_en_loc, velocity=None):
+        # Move the arm from the start loc to the end loc for only one step
+        if velocity is None:
+            velocity = self.arm_move_velocity
+        if self.prev_action_finished:
+            self.set_arm_location(arm_st_loc)
+            self.move_arm_move_dir = (arm_en_loc - arm_st_loc) / np.linalg.norm((arm_en_loc - arm_st_loc))
+
+            self.move_arm_prev_dist = 10000
+            self.prev_action_finished = False
+
+        self._set_arm_velocity(self.move_arm_move_dir * velocity)
+        with ignored_physics_warning():
+            self.physics.step()
+        cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_en_loc)
+        if cur_dist > self.move_arm_prev_dist:
+            self.prev_action_finished = True
+        self.move_arm_prev_dist = cur_dist
 
     def get_target_goal_state(self):
         # thetas = self.physics.data.qpos[self.state_target_rope_inds[7:]]
         # return np.hstack([np.cos(thetas), np.sin(thetas)])
-        return self.physics.data.xpos[self.target_rope_xpos_inds, :2].flatten().copy()
+        return self.physics.data.xpos[self.xpos_target_rope_inds, :2].flatten().copy()
 
     def get_achieved_goal_state(self):
         # ref_pose = self.physics.data.qpos[self.state_rope_ref_inds[-4:]]
@@ -204,8 +246,59 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         # return np.hstack([ref_pose, np.cos(thetas), np.sin(thetas)])
         # Only need to achieve the angles
         # return np.hstack([np.cos(thetas), np.sin(thetas)])
-        return self.physics.data.xpos[self.rope_xpos_inds, :2].flatten().copy()
+        return self.physics.data.xpos[self.xpos_rope_inds, :2].flatten().copy()
 
     @staticmethod
     def _get_endpoints_distance(pt1, pt2):
         return np.linalg.norm(pt1 - pt2)
+
+    @property
+    def EnvWrapper(self):
+        if self.action_type == 'endpoints':
+            return EndpointsPushEnvViewerWrapper
+        else:
+            return None
+
+    @property
+    def PolicyWrapper(self):
+        if self.action_type == 'endpoints':
+            return EndpointsPushPolicyViewerWrapper
+        else:
+            return None
+
+
+# These wrappers takes in the original environment and policy where the policy is parameterized by endpoints of pushing
+# and transform them into the ones that takes each step as velocity control in cartisan space
+
+class EndpointsPushEnvViewerWrapper(object):
+    def __init__(self, env):
+        self.env = env
+        self.physics = self.env.physics
+        assert self.env.action_type == 'endpoints'
+        self.env.action_type = 'endpoints_visualization'
+        self.prev_action_finished = self.env.prev_action_finished
+
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, action):
+        ret = self.env.step(action)
+        self.prev_action_finished = self.env.prev_action_finished
+        return ret
+
+
+class EndpointsPushPolicyViewerWrapper(object):
+    def __init__(self, policy, env):
+        self.policy = policy
+        self.env = env
+        self.env.prev_action_finished = True
+        self.last_action = None
+
+    def get_actions(self, *args, **kwargs):
+        if self.env.prev_action_finished:
+            action = self.policy.get_actions(*args, **kwargs)
+        else:
+            action = self.last_action
+        assert len(action) == 4
+        self.last_action = action
+        return action

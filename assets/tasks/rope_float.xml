@@ -7,12 +7,14 @@
         <flag warmstart="enable"/>
     </option>
 
-    <include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>
+    <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>-->
     <include file="./dfm_env/assets/scenes/scene.xml"/>
+    <include file="./dfm_env/assets/robots/sawyer_floating.xml"/>
+
 
     <worldbody>
-        <camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />
-        <include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>
+        <!--<camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />-->
+        <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>-->
         <body name="Rope_B7" pos="-0.15 0.5 0.72">
             <freejoint name="Rope_ref"/>
             <composite prefix='Rope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
@@ -64,8 +66,5 @@
         <motor ctrllimited="false" joint="Rope_J1_13" name="tr27"/>
         <motor ctrllimited="false" joint="Rope_J0_14" name="tr28"/>
         <motor ctrllimited="false" joint="Rope_J1_14" name="tr29"/>
-        <motor ctrllimited='false' joint='arm_slide0' name='tj0'/>
-        <motor ctrllimited='false' joint='arm_slide1' name='tj1'/>
-        <motor ctrllimited='false' joint='arm_slide2' name='tj2'/>
     </actuator>
 </mujoco>
