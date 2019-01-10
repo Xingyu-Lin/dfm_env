@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf8'?>
-<!--This is an older model compared to rope_temp. The other main difference is that the sawyer gripper is not fixed-->
+<!--This file is copied from rope_temp, with visualization and pushBlock. The difference is that the agent uses a block to push the block instead of a sawyer robot-->
 <mujoco>
     <compiler angle="radian"/>
 
@@ -7,12 +7,12 @@
         <flag warmstart="enable"/>
     </option>
 
-
+    <include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>
     <include file="./dfm_env/assets/scenes/scene.xml"/>
-    <include file="./dfm_env/assets/robots/sawyer_gripper.xml"/>
 
     <worldbody>
-
+        <camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />
+        <include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>
         <body name="Rope_B7" pos="-0.15 0.5 0.72">
             <freejoint name="Rope_ref"/>
             <composite prefix='Rope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
@@ -25,18 +25,17 @@
             <freejoint name="targetRope_ref"/>
             <composite prefix='targetRope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
-                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2' />
+                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2'/>
             </composite>
         </body>
 
     </worldbody>
-    <equality>
-        <weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.9 0.95 0.001"
-              solref="0.02 1"></weld>
-    </equality>
+    <!--<equality>-->
+        <!--<weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.9 0.95 0.001"-->
+              <!--solref="0.02 1"></weld>-->
+    <!--</equality>-->
 
     <actuator>
-
         <motor ctrllimited="false" joint="Rope_J0_0" name="tr0"/>
         <motor ctrllimited="false" joint="Rope_J1_0" name="tr1"/>
         <motor ctrllimited="false" joint="Rope_J0_1" name="tr2"/>
@@ -65,6 +64,8 @@
         <motor ctrllimited="false" joint="Rope_J1_13" name="tr27"/>
         <motor ctrllimited="false" joint="Rope_J0_14" name="tr28"/>
         <motor ctrllimited="false" joint="Rope_J1_14" name="tr29"/>
+        <motor ctrllimited='false' joint='arm_slide0' name='tj0'/>
+        <motor ctrllimited='false' joint='arm_slide1' name='tj1'/>
+        <motor ctrllimited='false' joint='arm_slide2' name='tj2'/>
     </actuator>
-
 </mujoco>

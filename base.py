@@ -75,7 +75,7 @@ class Base(GoalEnv):
         self._set_camera()
 
         # TODO add this as an argument
-        self.use_auxiliary_rewards = False
+        self.use_auxiliary_loss = False
 
         self.action_space = spaces.Box(-1, 1, shape=(self.n_actions,), dtype='float32')
         obs = self.reset()
@@ -247,7 +247,7 @@ class Base(GoalEnv):
     def step(self, action):
         action = action.flatten()
         action = np.clip(action, self.action_space.low, self.action_space.high)
-        if self.use_auxiliary_rewards:
+        if self.use_auxiliary_loss:
             prev_frame = self.render()
             self._set_action(action)
             try:

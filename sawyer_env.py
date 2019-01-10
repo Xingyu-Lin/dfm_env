@@ -32,8 +32,6 @@ class SawyerEnv(Base, gym.utils.EzPickle):
         :param use_dof: ['both', 'arm', 'gripper']
         Base class for sawyer manipulation environments
         '''
-        # TODO change n_action to be dependent on action_type
-
         self.use_dof = use_dof
         self.action_type = action_type
         self.fix_gripper = fix_gripper

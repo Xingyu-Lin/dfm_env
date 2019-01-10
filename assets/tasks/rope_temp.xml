@@ -1,4 +1,5 @@
 <?xml version='1.0' encoding='utf8'?>
+<!--This file contains the rope with actuators, visualization rope and a block. The sawyer gripper is fixed.-->
 <mujoco>
     <compiler angle="radian"/>
 
