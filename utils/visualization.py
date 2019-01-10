@@ -4,7 +4,7 @@ from dm_control import mujoco
 
 
 class ViewerWrapper(object):
-    def __init__(self, env, eval_params={'T': 10000}):
+    def __init__(self, env, eval_params={'T': 5}):
         self.env = env
         self.physics = self.env.physics
         self.T = eval_params['T']
@@ -17,7 +17,10 @@ class ViewerWrapper(object):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        self.time_count += 1
+        if 'time_count' in info:
+            self.time_count = info['time_count']
+        else:
+            self.time_count += 1
         if self.time_count == self.T:
             print('reward: ', reward)
             return TimeStep(StepType.LAST, reward, 1.0, obs)

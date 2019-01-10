@@ -198,7 +198,10 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         if velocity is None:
             velocity = self.arm_move_velocity
         self.set_arm_location(arm_st_loc)
-        move_dir = (arm_en_loc - arm_st_loc) / np.linalg.norm((arm_en_loc - arm_st_loc))
+        move_dist = np.linalg.norm((arm_en_loc - arm_st_loc))
+        if move_dist == 0:
+            return
+        move_dir = (arm_en_loc - arm_st_loc) / move_dist
 
         prev_dist = 10000
         cnt = 0
@@ -222,7 +225,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             velocity = self.arm_move_velocity
         if self.prev_action_finished:
             self.set_arm_location(arm_st_loc)
-            self.move_arm_move_dir = (arm_en_loc - arm_st_loc) / np.linalg.norm((arm_en_loc - arm_st_loc))
+            move_dist = np.linalg.norm((arm_en_loc - arm_st_loc))
+            if move_dist == 0:
+                self.prev_action_finished = True
+                return
+            self.move_arm_move_dir = (arm_en_loc - arm_st_loc) / move_dist
 
             self.move_arm_prev_dist = 10000
             self.prev_action_finished = False
@@ -277,14 +284,19 @@ class EndpointsPushEnvViewerWrapper(object):
         assert self.env.action_type == 'endpoints'
         self.env.action_type = 'endpoints_visualization'
         self.prev_action_finished = self.env.prev_action_finished
+        self.time_count = 0
 
     def reset(self):
+        self.time_count = 0
         return self.env.reset()
 
     def step(self, action):
-        ret = self.env.step(action)
+        obs, reward, done, info = self.env.step(action)
         self.prev_action_finished = self.env.prev_action_finished
-        return ret
+        if self.prev_action_finished:
+            self.time_count += 1
+        info['time_count'] = self.time_count
+        return obs, reward, done, info
 
 
 class EndpointsPushPolicyViewerWrapper(object):
