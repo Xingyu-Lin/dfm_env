@@ -17,7 +17,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                  use_image_goal=True,
                  use_true_reward=False,
                  arm_height=0.88,
-                 arm_move_velocity=0.15,
+                 arm_move_velocity=0.4,
                  **kwargs):
         '''
 

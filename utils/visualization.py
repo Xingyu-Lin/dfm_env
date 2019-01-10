@@ -4,7 +4,7 @@ from dm_control import mujoco
 
 
 class ViewerWrapper(object):
-    def __init__(self, env, eval_params={'T': 5}):
+    def __init__(self, env, eval_params={'T': 10000}):
         self.env = env
         self.physics = self.env.physics
         self.T = eval_params['T']
