@@ -150,7 +150,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         n1 = len(self.qpos_arm_inds)
         n2 = len(self.qpos_gripper_inds)
         n3 = len(self.qpos_rope_rot_inds)
-        init_state_rope_ref = [-0.15, 0.5, 0.705, 1, 0, 0, 0]
+        init_state_rope_ref = [0, 0.3, 0.705, 1, 0, 0, 0]
 
         self.init_arm_xpos = self._sample_rope_init_xpos()
         # self.arm_init_quat = [0, 1, 0, 0]

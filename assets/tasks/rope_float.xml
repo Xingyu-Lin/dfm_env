@@ -15,7 +15,7 @@
     <worldbody>
         <!--<camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />-->
         <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>-->
-        <body name="Rope_B7" pos="-0.15 0.5 0.72">
+        <body name="Rope_B7" pos="-0.25 0.3 0.72">
             <freejoint name="Rope_ref"/>
             <composite prefix='Rope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
@@ -23,7 +23,7 @@
             </composite>
         </body>
 
-        <body name="targetRope_B7" pos="-0.15 0.5 0.72">
+        <body name="targetRope_B7" pos="-0.25 0.3 0.72">
             <freejoint name="targetRope_ref"/>
             <composite prefix='targetRope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
