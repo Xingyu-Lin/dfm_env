@@ -39,6 +39,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.action_type = action_type
         self.arm_move_velocity = arm_move_velocity
         self.arm_height = arm_height
+
         if action_type == 'endpoints':
             n_actions = 4
             self.prev_action_finished = True
@@ -62,25 +63,27 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         if self.action_type == 'velocity':
             ctrl /= self.n_substeps
             self._set_arm_velocity(ctrl)
+            return
         elif self.action_type == 'endpoints':
-            point_st = self._apply_endpoint_boundary(ctrl[:2])
-            point_en = self._apply_endpoint_boundary(ctrl[2:])
+            point_st = self._transform_control(ctrl[:2])
+            point_en = self._transform_control(ctrl[2:])
             point_st = np.append(point_st, self.arm_height)
             point_en = np.append(point_en, self.arm_height)
             self._move_arm_by_endpoints(point_st, point_en)
+            return 'env_no_step'
         elif self.action_type == 'endpoints_visualization':
             if self.prev_action_finished:
-                point_st = self._apply_endpoint_boundary(ctrl[:2])
-                point_en = self._apply_endpoint_boundary(ctrl[2:])
+                point_st = self._transform_control(ctrl[:2])
+                point_en = self._transform_control(ctrl[2:])
                 self.prev_point_st = np.append(point_st, self.arm_height)
                 self.prev_point_en = np.append(point_en, self.arm_height)
             self._move_arm_by_endpoints_one_step(self.prev_point_st, self.prev_point_en)
-
-        return 'env_no_step'
+            return 'env_no_step'
 
     def _get_obs(self):
+        # print(self.get_arm_location())
         if self.use_visual_observation:
-            obs = self.render(depth=False, width=self.image_size, height=self.image_size, )
+            obs = self.render(depth=False)
         else:
             # thetas = self.physics.data.qpos[self.state_rope_rot_inds]
             obs = np.concatenate((self.physics.data.qpos[self.qpos_rope_ref_inds].copy(),
@@ -140,7 +143,9 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.visualization_offset = 0.1
 
     def _init_configure(self):
-        self.boundary_range = [[-0.61, 0.5], [0.12, 0.85]]  # [min_val, max_val] for each of the dimension
+        self.boundary_range = [[-0.8, 0.75], [-0.3, 0.83]]  # [min_val, max_val] for each of the dimension
+        self.boundary_coeff = [(self.boundary_range[i][1] - self.boundary_range[i][0]) / 2. for i in
+                               range(len(self.boundary_range))]
         self.configure_indexes()
         n1 = len(self.qpos_arm_inds)
         n2 = len(self.qpos_gripper_inds)
@@ -179,10 +184,16 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
     # Floating Sawyer environemtn specific helper functions
     # --------------------------------------------------
-    def _apply_endpoint_boundary(self, point):
-        for i in range(2):
-            point[i] = np.clip(point[i], self.boundary_range[i][0], self.boundary_range[i][1])
-        return point
+    def _transform_control(self, ctrl):
+        ret = []
+        for i in range(len(ctrl)):
+            ret.append(self.boundary_range[i][0] + (ctrl[i] + 1) * self.boundary_coeff[i])
+        return np.array(ret)
+
+    # def _apply_endpoint_boundary(self, point):
+    #     for i in range(2):
+    #         point[i] = np.clip(point[i], self.boundary_range[i][0], self.boundary_range[i][1])
+    #     return point
 
     def get_arm_location(self):
         return self.physics.data.qpos[self.qpos_arm_inds]

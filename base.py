@@ -27,7 +27,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera', visualization_mode=False):
+                 default_camera_name='static_camera'):
 
         if model_path.startswith("/"):
             fullpath = model_path
@@ -38,8 +38,8 @@ class Base(GoalEnv):
 
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
 
-        self.visualization_mode = visualization_mode
         self.n_actions = n_actions
+        self.action_space = spaces.Box(-1, 1, shape=(self.n_actions,), dtype='float32')
         self._init_configure()
         self.np_random = None
         self.seed()
@@ -76,8 +76,6 @@ class Base(GoalEnv):
 
         # TODO add this as an argument
         self.use_auxiliary_loss = False
-
-        self.action_space = spaces.Box(-1, 1, shape=(self.n_actions,), dtype='float32')
         obs = self.reset()
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
