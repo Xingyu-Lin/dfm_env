@@ -27,7 +27,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera'):
+                 default_camera_name='static_camera', use_auxiliary_loss=False):
 
         if model_path.startswith("/"):
             fullpath = model_path
@@ -78,9 +78,9 @@ class Base(GoalEnv):
         self.use_auxiliary_loss = False
         obs = self.reset()
         self.observation_space = spaces.Dict(dict(
-            desired_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
-            achieved_goal=spaces.Box(-1, 1, shape=obs['achieved_goal'].shape, dtype='float32'),
-            observation=spaces.Box(-1, 1, shape=obs['observation'].shape, dtype='float32'),
+            desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
+            achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
+            observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
         ))
         self.goal_dim = np.prod(obs['achieved_goal'].shape)
         self.goal_state_dim = np.prod(self.goal_state.shape)
@@ -245,6 +245,7 @@ class Base(GoalEnv):
         action = action.flatten()
         action = np.clip(action, self.action_space.low, self.action_space.high)
         if self.use_auxiliary_loss:
+            assert self.use_visual_observation
             prev_frame = self.render()
             ret = self._set_action(action)
             if ret != 'env_no_step':
@@ -256,13 +257,13 @@ class Base(GoalEnv):
             self._step_callback()
             obs = self._get_obs()
             next_frame = self.render()
-            transformed_img, transformation = self.random_image_transformation(next_frame)
+            # transformed_img, transformation = self.random_image_transformation(next_frame)
             aug_info = {
                 'prev_frame': prev_frame.flatten(),
                 'next_frame': next_frame.flatten(),
                 'action_taken': action,
-                'transformed_frame': transformed_img.flatten(),
-                'transformation': transformation
+                # 'transformed_frame': transformed_img.flatten(),
+                # 'transformation': transformation
             }
         else:
             ret = self._set_action(action)
@@ -275,7 +276,6 @@ class Base(GoalEnv):
             self._step_callback()
             obs = self._get_obs()
             aug_info = {}
-
         state_info = self.get_current_info()
         info = {**aug_info, **state_info}
 
@@ -285,8 +285,23 @@ class Base(GoalEnv):
         done = False
         if self.time_step >= self.horizon:
             done = True
-
         return obs, reward, done, info
+
+    def get_initial_info(self):
+        state_info = self.get_current_info()
+
+        if self.use_auxiliary_loss:
+            next_frame = self.render()
+            aug_info = {
+                'prev_frame': np.zeros(next_frame.shape).flatten(),
+                'next_frame': next_frame.flatten(),
+                'action_taken': np.zeros(self.action_space.shape),
+                # 'transformed_frame': transformed_img.flatten(),
+                # 'transformation': transformation
+            }
+            return {**aug_info, **state_info}
+        else:
+            return state_info
 
     def render(self, image_size=None, depth=False, camera_name=None):
         self._render_callback()

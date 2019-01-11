@@ -5,8 +5,9 @@ from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
 
 class RopeFloatEnv(SawyerFloatEnv):
-    def __init__(self, distance_threshold=5e-2, **kwargs):
+    def __init__(self, distance_threshold=5e-2, goal_push_num=3, **kwargs):
         model_path = 'tasks/rope_float.xml'
+        self.goal_push_num = goal_push_num
         super().__init__(model_path=model_path, distance_threshold=distance_threshold, **kwargs)
 
     # Rope specific helper functions
@@ -42,7 +43,7 @@ class RopeFloatEnv(SawyerFloatEnv):
         sampled_idx = np.random.choice(self.xpos_rope_inds, 1)
         point_start = self.physics.data.xpos[sampled_idx][0].copy()
         point_end = point_start.copy()
-        delta_x = (np.random.random() - 0.5) / 10
+        delta_x = (np.random.random() - 0.5) / 5
         delta_y = np.sign(np.random.random() - 0.5) * 0.2
         delta_xy = [delta_x, delta_y]
         point_start[:2] += delta_xy
@@ -56,21 +57,17 @@ class RopeFloatEnv(SawyerFloatEnv):
         # Sample two points near the rope and let the block to move from one point to another point
         # Keep trying until the position of the rope changes
 
-        init_rope_state = self.get_achieved_goal_state()
-        while True:
+        # init_rope_state = self.get_achieved_goal_state()
+        k = np.random.randint(0, self.goal_push_num) + 1
+        for _ in range(k):
             start_pt, end_pt = self._sample_rope_neighbourhood()
             # Fix the height of the arm when moving
             start_pt[2] = end_pt[2] = self.arm_height
             self._move_arm_by_endpoints(start_pt, end_pt, render=False)
-            cur_rope_state = self.get_achieved_goal_state()
-            distance = np.linalg.norm(init_rope_state - cur_rope_state)
-            if 1e-5 < distance < 3:
-                # Set the target rope qpos and reset the rope qpos
-                # self._move_gripper(gripper_target=self.gripper_init_pos, gripper_rotation=self.gripper_init_quat)
-                target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
-                self._reset_all_to_init_pos()
-                self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos
-                self.set_arm_location(self.init_arm_xpos)
-                return
-            else:
-                self._reset_all_to_init_pos()
+
+        # Set the target rope qpos and reset the rope qpos
+        target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
+        self._reset_all_to_init_pos()
+        self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos
+        self.set_arm_location(self.init_arm_xpos)
+        return

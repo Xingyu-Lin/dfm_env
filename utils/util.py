@@ -66,4 +66,4 @@ def cv_render(img, name='display'):
     '''Take an image in ndarray format and show it with opencv. '''
     img = img[:, :, (2, 1, 0)] / 256.
     cv.imshow(name, img)
-    cv.waitKey(10)
+    cv.waitKey(2)

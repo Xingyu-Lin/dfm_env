@@ -320,6 +320,7 @@ class EndpointsPushPolicyViewerWrapper(object):
     def get_actions(self, *args, **kwargs):
         if self.env.prev_action_finished:
             action = self.policy.get_actions(*args, **kwargs)
+            print(action)
         else:
             action = self.last_action
         assert len(action) == 4
