@@ -90,8 +90,9 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             obs = self.render(depth=False)
         else:
             # thetas = self.physics.data.qpos[self.state_rope_rot_inds]
-            obs = np.concatenate((self.physics.data.qpos[self.qpos_rope_ref_inds].copy(),
-                                  self.physics.data.qpos[self.qpos_rope_rot_inds].copy()), axis=0)
+            # obs = np.concatenate((self.physics.data.qpos[self.qpos_rope_ref_inds].copy(),
+            #                       self.physics.data.qpos[self.qpos_rope_rot_inds].copy()), axis=0)
+            obs = self.physics.data.xpos[self.xpos_rope_inds].copy()
 
         if self.use_image_goal:
             desired_goal = self.goal_observation
