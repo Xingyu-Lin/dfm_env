@@ -59,6 +59,10 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _set_action(self, ctrl):
+        #  [-0.28, 0.80
+        # self.set_arm_location([-0.28, 0.80, 0.88])
+        # if np.random.random() < 0.1:
+        #     print('arm:', self.get_arm_location())
         assert len(ctrl) == self.n_actions
         if self.action_type == 'velocity':
             # ctrl /= self.n_substeps
@@ -143,7 +147,8 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.visualization_offset = 0.1
 
     def _init_configure(self):
-        self.boundary_range = [[-0.8, 0.75], [-0.3, 0.83]]  # [min_val, max_val] for each of the dimension
+        # self.boundary_range = [[-0.8, 0.75], [-0.3, 0.83]]  # [min_val, max_val] for each of the dimension
+        self.boundary_range = [[-0.56, 0.51], [-0.28, 0.80]]  # [min_val, max_val] for each of the dimension
         self.boundary_coeff = [(self.boundary_range[i][1] - self.boundary_range[i][0]) / 2. for i in
                                range(len(self.boundary_range))]
         self.configure_indexes()

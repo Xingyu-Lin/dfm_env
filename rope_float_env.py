@@ -3,7 +3,6 @@ from dfm_env.sawyer_float_env import SawyerFloatEnv
 import numpy as np
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
-
 class RopeFloatEnv(SawyerFloatEnv):
     def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=False, **kwargs):
         model_path = 'tasks/rope_float.xml'
@@ -26,6 +25,8 @@ class RopeFloatEnv(SawyerFloatEnv):
 
     def _reset_sim(self):
         # Sample goal and render image, Get the goal after the environment is stable
+        # print('camera:', self.get_camera_info(-1))
+
         with self.physics.reset_context():
             self._reset_all_to_init_pos()
             self._random_push_rope()

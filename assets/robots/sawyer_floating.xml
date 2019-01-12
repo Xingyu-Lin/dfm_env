@@ -61,7 +61,10 @@
     <worldbody>
         <light directional='true' cutoff='40' exponent='10' diffuse='.4 .4 .4' specular='.7 .7 .7' pos='0.9 0 1.5'
                dir='0 0 -1' castshadow="false"/>
-        <camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0'/>
+        <!--Tilted view-->
+        <!--<camera name='static_camera' pos='0.0 -0.28 2.1' euler='0.3 0 0'/>-->
+        <!--Top down view-->
+        <camera name='static_camera' pos='0.0 0.25 2.1' euler='0. 0 0'/>
 
         <!--================= Mocap =================-->
         <!--<body name="mocap_body" pos="0 0 0" mocap="true">-->

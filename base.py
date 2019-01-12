@@ -18,6 +18,7 @@ from termcolor import colored
 import cv2 as cv
 import copy
 
+
 class Base(GoalEnv):
     '''
     Base class for all dm_control based, goal oriented environments.
@@ -356,3 +357,9 @@ class Base(GoalEnv):
         if orientation_quat is None:
             orientation_quat = [0., 0., 0., 0.]
         self.physics.model.cam_quat[camera_id] = orientation_quat
+
+    def get_camera_info(self, camera_id):
+        '''
+        :return: the camera position and quaternion
+        '''
+        return self.physics.model.cam_pos[camera_id], self.physics.model.cam_quat[camera_id]
