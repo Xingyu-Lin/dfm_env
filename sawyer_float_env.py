@@ -61,7 +61,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def _set_action(self, ctrl):
         assert len(ctrl) == self.n_actions
         if self.action_type == 'velocity':
-            ctrl /= self.n_substeps
+            # ctrl /= self.n_substeps
             self._set_arm_velocity(ctrl)
             return
         elif self.action_type == 'endpoints':
@@ -90,7 +90,6 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                                   self.physics.data.qpos[self.qpos_rope_rot_inds].copy()), axis=0)
 
         if self.use_image_goal:
-            assert False
             desired_goal = self.goal_observation
             achieved_goal = obs
         else:
@@ -133,6 +132,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.geom_rgba_rope_inds = [idx for idx, s in enumerate(list_geom) if s != 0 and s.startswith('Rope_G')]
         self.geom_rgba_target_rope_inds = [idx for idx, s in enumerate(list_geom) if
                                            s != 0 and s.startswith('targetRope_G')]
+        self.geom_rgba_arm_inds = [idx for idx, s in enumerate(list_geom) if s == 0]
         # self.push_block_geom_rgba_inds = [idx for idx, s in enumerate(list_geom) if
         #                                   s != 0 and s.startswith('pushBlock_G')]
 

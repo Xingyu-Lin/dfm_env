@@ -5,10 +5,18 @@ from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
 
 class RopeFloatEnv(SawyerFloatEnv):
-    def __init__(self, distance_threshold=5e-2, goal_push_num=3, **kwargs):
+    def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=False, **kwargs):
         model_path = 'tasks/rope_float.xml'
         self.goal_push_num = goal_push_num
+        self.visualization_mode = visualization_mode
         super().__init__(model_path=model_path, distance_threshold=distance_threshold, **kwargs)
+        if not self.visualization_mode:
+            # Hide the arm in case we are not visualizing
+            self.physics.model.geom_rgba[self.geom_rgba_arm_inds, 3] = 0
+            # Also hide the target rope if image observation is used
+            if self.use_visual_observation:
+                self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 0.
+
 
     # Rope specific helper functions
     def _sample_rope_init_xpos(self):
@@ -22,14 +30,14 @@ class RopeFloatEnv(SawyerFloatEnv):
             self._reset_all_to_init_pos()
             self._random_push_rope()
             if self.use_image_goal or True:
-                self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] += self.visualization_offset
+                # self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] += self.visualization_offset
                 target_original_transparancy = self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3][0]
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 1.
                 self.physics.model.geom_rgba[self.geom_rgba_rope_inds, 3] = 0
-
+                self.physics.forward()
                 # self.physics.model.geom_rgba[1, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
                 self.goal_observation = self.render(depth=False)
-                self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] -= self.visualization_offset
+                # self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] -= self.visualization_offset
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = target_original_transparancy
                 self.physics.model.geom_rgba[self.geom_rgba_rope_inds, 3] = 1.
                 # Set the target qpos
@@ -70,4 +78,4 @@ class RopeFloatEnv(SawyerFloatEnv):
         self._reset_all_to_init_pos()
         self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos
         self.set_arm_location(self.init_arm_xpos)
-        return
+        return target_rope_qpos
