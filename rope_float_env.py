@@ -3,6 +3,7 @@ from dfm_env.sawyer_float_env import SawyerFloatEnv
 import numpy as np
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
+
 class RopeFloatEnv(SawyerFloatEnv):
     def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=False, **kwargs):
         model_path = 'tasks/rope_float.xml'
@@ -16,7 +17,6 @@ class RopeFloatEnv(SawyerFloatEnv):
             if self.use_visual_observation:
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 0.
 
-
     # Rope specific helper functions
     def _sample_rope_init_xpos(self):
         # Sample one of the rope elements and put the gripper on top of it
@@ -29,7 +29,18 @@ class RopeFloatEnv(SawyerFloatEnv):
 
         with self.physics.reset_context():
             self._reset_all_to_init_pos()
-            self._random_push_rope()
+            self._random_push_rope(push_num=1)  # Init rope distribution
+            one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
+            self._random_push_rope(push_num=None)  # Push k times according to the environment
+
+            # Set the target rope qpos and reset the rope qpos
+            target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
+            self.physics.data.qpos[self.qpos_rope_inds] = one_push_rope_qpos
+            self.physics.data.qvel[self.qpos_rope_inds] = np.zeros(len(self.qpos_rope_inds))
+            self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos
+            self.physics.forward()
+            # self.set_arm_location(self.init_arm_xpos)
+
             if self.use_image_goal or True:
                 # self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] += self.visualization_offset
                 target_original_transparancy = self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3][0]
@@ -62,21 +73,17 @@ class RopeFloatEnv(SawyerFloatEnv):
         # point_end[2] = self.boundary_range[2][0]  # Account for the height of the gripper
         return point_start, point_end
 
-    def _random_push_rope(self):
+    def _random_push_rope(self, push_num=None):
         # Sample two points near the rope and let the block to move from one point to another point
         # Keep trying until the position of the rope changes
 
         # init_rope_state = self.get_achieved_goal_state()
-        k = np.random.randint(0, self.goal_push_num) + 1
-        for _ in range(k):
+        if push_num is None:
+            push_num = np.random.randint(0, self.goal_push_num) + 1
+
+        for _ in range(push_num):
             start_pt, end_pt = self._sample_rope_neighbourhood()
             # Fix the height of the arm when moving
             start_pt[2] = end_pt[2] = self.arm_height
             self._move_arm_by_endpoints(start_pt, end_pt, render=False)
-
-        # Set the target rope qpos and reset the rope qpos
-        target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
-        self._reset_all_to_init_pos()
-        self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos
-        self.set_arm_location(self.init_arm_xpos)
-        return target_rope_qpos
+        return
