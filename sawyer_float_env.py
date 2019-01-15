@@ -4,10 +4,7 @@ import numpy as np
 
 from .base import Base
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
-from dm_control import mujoco
-from dm_control.suite import base
-import cv2 as cv
-
+from shapely.geometry import LineString, Point
 
 class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path, distance_threshold, distance_threshold_obs=0,
@@ -59,10 +56,6 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _set_action(self, ctrl):
-        #  [-0.28, 0.80
-        # self.set_arm_location([-0.28, 0.80, 0.88])
-        # if np.random.random() < 0.1:
-        #     print('arm:', self.get_arm_location())
         assert len(ctrl) == self.n_actions
         if self.action_type == 'velocity':
             # ctrl /= self.n_substeps
@@ -210,12 +203,46 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def _set_arm_velocity(self, arm_velocity):
         self.physics.data.qvel[self.qpos_arm_inds] = arm_velocity
 
-    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False):
+    @staticmethod
+    def get_point_dist(pt1, pt2):
+        return np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
+
+    def _rope_intersection_filter(self, point_st, point_en, eps=0.07):
+        # Take in a push for point_st to point_en, return a new push starting point
+        line = LineString([(point_st[0], point_st[1]), (point_en[0], point_en[1])])
+        intersection_pts = []
+        for ind in self.xpos_rope_inds:
+            if self.get_point_dist(point_st, self.physics.data.xpos[ind][:2]) < eps:  # start point inside the circle
+                return point_st
+            point = Point(*self.physics.data.xpos[ind][:2])  # Get the x,y postion of one point on the rope
+            circle = point.buffer(eps).boundary
+            intersection_pt = circle.intersection(line)
+            intersection_pts.append(intersection_pt)
+        best_dist = np.inf
+        best_pt = None
+        for pt in intersection_pts:
+            if not isinstance(pt, Point):  # Do not count as intersection for boundary points
+                for geom in pt.geoms:
+                    dist = self.get_point_dist(point_st, geom.coords[0])
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_pt = geom.coords[0]
+        if best_pt is not None:
+            best_pt = [best_pt[0], best_pt[1], point_st[2]]
+
+        return best_pt
+
+    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
         # Move the arm from the start loc to the end loc
+        # Accelearation: Only do the simulation when the earm intersects the arm
+        if accelerated:
+            arm_st_loc = self._rope_intersection_filter(arm_st_loc, arm_en_loc)
+            if arm_st_loc is None:
+                return
         if velocity is None:
             velocity = self.arm_move_velocity
         self.set_arm_location(arm_st_loc)
-        move_dist = np.linalg.norm((arm_en_loc - arm_st_loc))
+        move_dist = self.get_point_dist(arm_en_loc, arm_st_loc)
         if move_dist == 0:
             return
         move_dir = (arm_en_loc - arm_st_loc) / move_dist
@@ -242,7 +269,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             velocity = self.arm_move_velocity
         if self.prev_action_finished:
             self.set_arm_location(arm_st_loc)
-            move_dist = np.linalg.norm((arm_en_loc - arm_st_loc))
+            move_dist = self.get_point_dist(arm_en_loc, arm_st_loc)
             if move_dist == 0:
                 self.prev_action_finished = True
                 return
@@ -250,7 +277,6 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
             self.move_arm_prev_dist = 10000
             self.prev_action_finished = False
-
         self._set_arm_velocity(self.move_arm_move_dir * velocity)
         with ignored_physics_warning():
             self.physics.step()
