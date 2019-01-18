@@ -207,7 +207,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def get_point_dist(pt1, pt2):
         return np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
 
-    def _rope_intersection_filter(self, point_st, point_en, eps=0.07):
+    def _rope_intersection_filter(self, point_st, point_en, eps=0.1):
         # Take in a push for point_st to point_en, return a new push starting point
         line = LineString([(point_st[0], point_st[1]), (point_en[0], point_en[1])])
         intersection_pts = []

@@ -76,7 +76,7 @@ class Base(GoalEnv):
         self._set_camera()
 
         # TODO add this as an argument
-        self.use_auxiliary_loss = False
+        self.use_auxiliary_loss = use_auxiliary_loss
         obs = self.reset()
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
