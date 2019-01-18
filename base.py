@@ -245,9 +245,8 @@ class Base(GoalEnv):
     def step(self, action):
         action = action.flatten()
         action = np.clip(action, self.action_space.low, self.action_space.high)
-        if self.use_auxiliary_loss:
-            assert self.use_visual_observation
-            prev_frame = self.render()
+
+        if hasattr(self, 'visualization_mode') and self.visualization_mode:
             ret = self._set_action(action)
             if ret != 'env_no_step':
                 try:
@@ -256,27 +255,38 @@ class Base(GoalEnv):
                 except PhysicsError as ex:
                     print(colored(ex, 'red'))
             self._step_callback()
-            obs = self._get_obs()
-            next_frame = self.render()
-            # transformed_img, transformation = self.random_image_transformation(next_frame)
-            aug_info = {
-                'prev_frame': prev_frame.flatten(),
-                'next_frame': next_frame.flatten(),
-                'action_taken': action,
-                # 'transformed_frame': transformed_img.flatten(),
-                # 'transformation': transformation
-            }
-        else:
-            ret = self._set_action(action)
-            if ret != 'env_no_step':
-                try:
-                    for _ in range(self.n_substeps):
-                        self.physics.step()
-                except PhysicsError as ex:
-                    print(colored(ex, 'red'))
-            self._step_callback()
-            obs = self._get_obs()
             aug_info = {}
+            if (hasattr(self, 'prev_action_finished') and self.prev_action_finished) or (
+              not hasattr(self, 'prev_obs')):
+                obs = self._get_obs()
+                self.prev_obs = obs
+            else:
+                obs = self.prev_obs
+        else:
+            if self.use_auxiliary_loss:
+                prev_frame = self.render()
+
+            ret = self._set_action(action)
+            if ret != 'env_no_step':
+                try:
+                    for _ in range(self.n_substeps):
+                        self.physics.step()
+                except PhysicsError as ex:
+                    print(colored(ex, 'red'))
+            self._step_callback()
+            obs = self._get_obs()
+            if self.use_auxiliary_loss:
+                next_frame = self.render()
+                # transformed_img, transformation = self.random_image_transformation(next_frame)
+                aug_info = {
+                    'prev_frame': prev_frame.flatten(),
+                    'next_frame': next_frame.flatten(),
+                    'action_taken': action,
+                    # 'transformed_frame': transformed_img.flatten(),
+                    # 'transformation': transformation
+                }
+            else:
+                aug_info = {}
         state_info = self.get_current_info()
         info = {**aug_info, **state_info}
 
