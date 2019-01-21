@@ -6,6 +6,7 @@ from .base import Base
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 from shapely.geometry import LineString, Point
 
+
 class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def __init__(self, model_path, distance_threshold, distance_threshold_obs=0,
                  n_substeps=20, horizon=200, image_size=400, action_type='endpoints',
@@ -66,7 +67,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             point_en = self._transform_control(ctrl[2:])
             point_st = np.append(point_st, self.arm_height)
             point_en = np.append(point_en, self.arm_height)
-            self._move_arm_by_endpoints(point_st, point_en)
+            self.quivalent_action_taken = self._move_arm_by_endpoints(point_st, point_en)
             return 'env_no_step'
         elif self.action_type == 'endpoints_visualization':
             if self.prev_action_finished:
@@ -235,10 +236,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
         # Move the arm from the start loc to the end loc
         # Accelearation: Only do the simulation when the earm intersects the arm
+        # Return the quivalent actions taken by the sawyer
         if accelerated:
             arm_st_loc = self._rope_intersection_filter(arm_st_loc, arm_en_loc)
             if arm_st_loc is None:
-                return
+                return np.array([0., 0., 0., 0.])
         if velocity is None:
             velocity = self.arm_move_velocity
         self.set_arm_location(arm_st_loc)
@@ -262,6 +264,8 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 break
             prev_dist = cur_dist
             cnt += 1
+        if accelerated:
+            return np.hstack([arm_st_loc[:2], self.get_arm_location()[:2]])
 
     def _move_arm_by_endpoints_one_step(self, arm_st_loc, arm_en_loc, velocity=None):
         # Move the arm from the start loc to the end loc for only one step

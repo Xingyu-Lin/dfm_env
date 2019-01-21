@@ -263,8 +263,6 @@ class Base(GoalEnv):
             else:
                 obs = self.prev_obs
         else:
-            if self.use_auxiliary_loss:
-                prev_frame = self.render()
 
             ret = self._set_action(action)
             if ret != 'env_no_step':
@@ -276,12 +274,13 @@ class Base(GoalEnv):
             self._step_callback()
             obs = self._get_obs()
             if self.use_auxiliary_loss:
-                next_frame = self.render()
                 # transformed_img, transformation = self.random_image_transformation(next_frame)
+                if hasattr(self, 'quivalent_action_taken') and self.quivalent_action_taken is not None:
+                    action_taken = self.quivalent_action_taken
+                else:
+                    action_taken = action
                 aug_info = {
-                    'prev_frame': prev_frame.flatten(),
-                    'next_frame': next_frame.flatten(),
-                    'action_taken': action,
+                    'action_taken': action_taken,
                     # 'transformed_frame': transformed_img.flatten(),
                     # 'transformation': transformation
                 }
@@ -302,10 +301,7 @@ class Base(GoalEnv):
         state_info = self.get_current_info()
 
         if self.use_auxiliary_loss:
-            next_frame = self.render()
             aug_info = {
-                'prev_frame': np.zeros(next_frame.shape).flatten(),
-                'next_frame': next_frame.flatten(),
                 'action_taken': np.zeros(self.action_space.shape),
                 # 'transformed_frame': transformed_img.flatten(),
                 # 'transformation': transformation
