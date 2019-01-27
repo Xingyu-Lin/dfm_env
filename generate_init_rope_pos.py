@@ -13,7 +13,7 @@ if __name__ == '__main__':
     num_cpu = 50
     N = 2000
     goal_push_num = 2
-    os.system('rm -rf ./dfm_env/data/*_{}.npz'.format(goal_push_num))
+    os.system('rm -rf ./dfm_env/cached/*_{}.npz'.format(goal_push_num))
 
     whoami = mpi_fork(num_cpu, nv_profile=False)
     if whoami == 'parent':
@@ -49,7 +49,7 @@ if __name__ == '__main__':
             comm.Recv(worker_all_target_qpos, source=i + 1, tag=13)
             all_init_qpos = np.vstack([all_init_qpos, worker_all_init_qpos])
             all_target_qpos = np.vstack([all_target_qpos, worker_all_target_qpos])
-        file_name = './dfm_env/data/generated_rope_{}.npz'.format(goal_push_num)
+        file_name = './dfm_env/cached/generated_rope_{}.npz'.format(goal_push_num)
         np.savez(file_name, all_init_qpos=all_init_qpos, all_target_qpos=all_target_qpos)
     else:
         comm.Send(all_init_qpos, dest=0, tag=13)

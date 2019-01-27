@@ -9,13 +9,16 @@ class RopeFloatEnv(SawyerFloatEnv):
     def __init__(self, distance_threshold=5e-2, goal_push_num=2, visualization_mode=False, **kwargs):
         model_path = 'tasks/rope_float.xml'
         self.goal_push_num = goal_push_num
-        cached_file = './dfm_env/data/generated_rope_{}.npz'.format(goal_push_num)
+        cached_file = './dfm_env/cached/generated_rope_{}.npz'.format(goal_push_num)
         if os.path.exists(cached_file):
             self.use_cached_inits_goals = True
             data = np.load(cached_file)
             self.all_init_qpos = data['all_init_qpos']
             self.all_target_qpos = data['all_target_qpos']
             print('Rope_float_env: using cached init poses and goal poses')
+            # TODO check why this is being executed multiple times
+            # import traceback
+            # traceback.print_stack()
         else:
             self.use_cached_inits_goals = False
         self.visualization_mode = visualization_mode
