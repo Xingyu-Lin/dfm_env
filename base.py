@@ -28,7 +28,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera', use_auxiliary_loss=False):
+                 default_camera_name='static_camera', use_auxiliary_loss=False, **kwargs):
 
         if model_path.startswith("/"):
             fullpath = model_path

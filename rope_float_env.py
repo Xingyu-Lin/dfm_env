@@ -2,12 +2,22 @@
 from dfm_env.sawyer_float_env import SawyerFloatEnv
 import numpy as np
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
+import os.path
 
 
 class RopeFloatEnv(SawyerFloatEnv):
-    def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=False, **kwargs):
+    def __init__(self, distance_threshold=5e-2, goal_push_num=2, visualization_mode=False, **kwargs):
         model_path = 'tasks/rope_float.xml'
         self.goal_push_num = goal_push_num
+        cached_file = './dfm_env/data/generated_rope_{}.npz'.format(goal_push_num)
+        if os.path.exists(cached_file):
+            self.use_cached_inits_goals = True
+            data = np.load(cached_file)
+            self.all_init_qpos = data['all_init_qpos']
+            self.all_target_qpos = data['all_target_qpos']
+            print('Rope_float_env: using cached init poses and goal poses')
+        else:
+            self.use_cached_inits_goals = False
         self.visualization_mode = visualization_mode
         super().__init__(model_path=model_path, distance_threshold=distance_threshold, **kwargs)
         if not self.visualization_mode:
@@ -29,12 +39,17 @@ class RopeFloatEnv(SawyerFloatEnv):
 
         with self.physics.reset_context():
             self._reset_all_to_init_pos()
-            self._random_push_rope(push_num=1)  # Init rope distribution
-            one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
-            self._random_push_rope(push_num=None)  # Push k times according to the environment
+            if not self.use_cached_inits_goals:
+                self._random_push_rope(push_num=1)  # Init rope distribution
+                one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
+                # Set the target rope qpos and reset the rope qpos
+                self._random_push_rope(push_num=None)  # Push k times according to the environment
+                target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
+            else:
+                cached_idx = np.random.randint(0, len(self.all_init_qpos))
+                one_push_rope_qpos = self.all_init_qpos[cached_idx]
+                target_rope_qpos = self.all_target_qpos[cached_idx]
 
-            # Set the target rope qpos and reset the rope qpos
-            target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
             self.physics.data.qpos[self.qpos_rope_inds] = one_push_rope_qpos
             self.physics.data.qvel[self.qpos_rope_inds] = np.zeros(len(self.qpos_rope_inds))
             self.physics.data.qpos[self.qpos_target_rope_inds] = target_rope_qpos

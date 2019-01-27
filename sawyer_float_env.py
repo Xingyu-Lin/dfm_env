@@ -53,7 +53,6 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         gym.utils.EzPickle.__init__(self)
 
-    # TODO set the arm to be invisible
     # Implementation of functions from GoalEnvExt
     # ----------------------------
     def _set_action(self, ctrl):
