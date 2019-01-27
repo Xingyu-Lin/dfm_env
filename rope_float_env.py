@@ -4,6 +4,36 @@ import numpy as np
 from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 import os.path
 
+# def generate_color_map():
+#     from random import shuffle
+#     import matplotlib.pyplot as plt
+#     # Set the rope to be colorful
+#     cmap = plt.get_cmap('tab20')
+#     cmap_rgba = [cmap(x / 20.) for x in range(20)]
+#     shuffle(cmap_rgba)
+
+default_color_map = np.array([[0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0],
+                              [0.7725490196078432, 0.6901960784313725, 0.8352941176470589, 1.0],
+                              [0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0],
+                              [1.0, 0.4980392156862745, 0.054901960784313725, 1.0],
+                              [0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0],
+                              [0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0],
+                              [0.6823529411764706, 0.7803921568627451, 0.9098039215686274, 1.0],
+                              [1.0, 0.596078431372549, 0.5882352941176471, 1.0],
+                              [0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0],
+                              [0.596078431372549, 0.8745098039215686, 0.5411764705882353, 1.0],
+                              [0.7686274509803922, 0.611764705882353, 0.5803921568627451, 1.0],
+                              [0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0],
+                              [1.0, 0.7333333333333333, 0.47058823529411764, 1.0],
+                              [0.7803921568627451, 0.7803921568627451, 0.7803921568627451, 1.0],
+                              [0.6196078431372549, 0.8549019607843137, 0.8980392156862745, 1.0],
+                              [0.9686274509803922, 0.7137254901960784, 0.8235294117647058, 1.0],
+                              [0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0],
+                              [0.8588235294117647, 0.8588235294117647, 0.5529411764705883, 1.0],
+                              [0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0],
+                              [0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0],
+                              ])
+
 
 class RopeFloatEnv(SawyerFloatEnv):
     def __init__(self, distance_threshold=5e-2, goal_push_num=2, visualization_mode=False, **kwargs):
@@ -21,6 +51,7 @@ class RopeFloatEnv(SawyerFloatEnv):
             # traceback.print_stack()
         else:
             self.use_cached_inits_goals = False
+
         self.visualization_mode = visualization_mode
         super().__init__(model_path=model_path, distance_threshold=distance_threshold, **kwargs)
         if not self.visualization_mode:
@@ -29,6 +60,10 @@ class RopeFloatEnv(SawyerFloatEnv):
             # Also hide the target rope if image observation is used
             if self.use_visual_observation:
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 0.
+
+        num_link = len(self.geom_rgba_rope_inds)
+        self.physics.model.geom_rgba[self.geom_rgba_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
+        self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
 
     # Rope specific helper functions
     def _sample_rope_init_xpos(self):
