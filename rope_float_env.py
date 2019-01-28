@@ -45,7 +45,7 @@ class RopeFloatEnv(SawyerFloatEnv):
             data = np.load(cached_file)
             self.all_init_qpos = data['all_init_qpos']
             self.all_target_qpos = data['all_target_qpos']
-            print('Rope_float_env: using cached init poses and goal poses')
+            print('Rope_float_env: using cached init poses and goal poses with {} poses'.format(len(data['all_init_qpos'])))
             # TODO check why this is being executed multiple times
             # import traceback
             # traceback.print_stack()
