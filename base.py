@@ -146,7 +146,7 @@ class Base(GoalEnv):
     def _init_configure(self):
         pass
 
-    def _reset_sim(self):
+    def _reset_sim(self, restore_info=None):
         """Resets a simulation and indicates whether or not it was successful.
         If a reset was unsuccessful (e.g. if a randomized state caused an error in the
         simulation), this method should indicate such a failure by returning False.
@@ -219,7 +219,7 @@ class Base(GoalEnv):
     # Core functions framework
     # -----------------------------
 
-    def reset(self):
+    def reset(self, restore_info=None):
         '''
         Attempt to reset the simulator. Since we randomize initial conditions, it
         is possible to get into a state with numerical issues (e.g. due to penetration or
@@ -238,7 +238,10 @@ class Base(GoalEnv):
             self.goal_state = goal_state.copy()
         did_reset_sim = False
         while not did_reset_sim:
-            did_reset_sim = self._reset_sim()
+            if hasattr(self, 'get_restore_info') and restore_info is not None:
+                did_reset_sim = self._reset_sim(restore_info)
+            else:
+                did_reset_sim = self._reset_sim()
 
         return self._get_obs()
 

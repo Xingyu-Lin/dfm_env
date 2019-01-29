@@ -71,22 +71,27 @@ class RopeFloatEnv(SawyerFloatEnv):
         sampled_idx = np.random.choice(self.xpos_rope_inds, 1)
         return self.physics.data.xpos[sampled_idx] + np.array([0, 0, 0.20])
 
-    def _reset_sim(self):
+    def _reset_sim(self, restore_info = None):
         # Sample goal and render image, Get the goal after the environment is stable
         # print('camera:', self.get_camera_info(-1))
-
         with self.physics.reset_context():
             self._reset_all_to_init_pos()
-            if not self.use_cached_inits_goals:
-                self._random_push_rope(push_num=1)  # Init rope distribution
-                one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
-                # Set the target rope qpos and reset the rope qpos
-                self._random_push_rope(push_num=None)  # Push k times according to the environment
-                target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
+            if restore_info is None:
+                if not self.use_cached_inits_goals:
+                    self._random_push_rope(push_num=1)  # Init rope distribution
+                    one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
+                    # Set the target rope qpos and reset the rope qpos
+                    self._random_push_rope(push_num=None)  # Push k times according to the environment
+                    target_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds].copy()
+                else:
+                    cached_idx = np.random.randint(0, len(self.all_init_qpos))
+                    one_push_rope_qpos = self.all_init_qpos[cached_idx]
+                    target_rope_qpos = self.all_target_qpos[cached_idx]
             else:
-                cached_idx = np.random.randint(0, len(self.all_init_qpos))
-                one_push_rope_qpos = self.all_init_qpos[cached_idx]
-                target_rope_qpos = self.all_target_qpos[cached_idx]
+                one_push_rope_qpos = restore_info['one_push_rope_qpos']
+                target_rope_qpos = restore_info['target_rope_qpos']
+            self._one_push_rope_qpos = one_push_rope_qpos.copy()
+            self._target_rope_qpos = target_rope_qpos.copy()
 
             self.physics.data.qpos[self.qpos_rope_inds] = one_push_rope_qpos
             self.physics.data.qvel[self.qpos_rope_inds] = np.zeros(len(self.qpos_rope_inds))
@@ -140,3 +145,9 @@ class RopeFloatEnv(SawyerFloatEnv):
             start_pt[2] = end_pt[2] = self.arm_height
             self._move_arm_by_endpoints(start_pt, end_pt, render=False)
         return
+
+    def get_restore_info(self):
+        return {
+            'one_push_rope_qpos': self._one_push_rope_qpos,
+            'target_rope_qpos': self._target_rope_qpos
+        }
