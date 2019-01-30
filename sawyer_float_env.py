@@ -234,12 +234,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         return best_pt
 
-    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=False):
+    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
         # Move the arm from the start loc to the end loc
         # Accelearation: Only do the simulation when the earm intersects the arm
         # Return the quivalent actions taken by the sawyer
         if accelerated:
-            assert False
             arm_st_loc = self._rope_intersection_filter(arm_st_loc, arm_en_loc)
             if arm_st_loc is None:
                 return np.array([0., 0., 0., 0.])
@@ -269,8 +268,12 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         if accelerated:
             return np.hstack([arm_st_loc[:2], self.get_arm_location()[:2]])
 
-    def _move_arm_by_endpoints_one_step(self, arm_st_loc, arm_en_loc, velocity=None):
+    def _move_arm_by_endpoints_one_step(self, arm_st_loc, arm_en_loc, velocity=None, accelerated=False):
         # Move the arm from the start loc to the end loc for only one step
+        if accelerated:
+            arm_st_loc = self._rope_intersection_filter(arm_st_loc, arm_en_loc)
+            if arm_st_loc is None:
+                return np.array([0., 0., 0., 0.])
         if velocity is None:
             velocity = self.arm_move_velocity
         if self.prev_action_finished:
@@ -335,16 +338,16 @@ class EndpointsPushEnvViewerWrapper(object):
         self.prev_action_finished = self.env.prev_action_finished
         self.time_count = 0
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.time_count = 0
-        return self.env.reset()
+        return self.env.reset(**kwargs)
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         self.prev_action_finished = self.env.prev_action_finished
         if self.prev_action_finished:
             self.time_count += 1
-        info['time_count'] = self.time_count
+        info['time_count'] = self.time_count  # The time count for the high-level action
         return obs, reward, done, info
 
 

@@ -313,7 +313,6 @@ class Base(GoalEnv):
             return state_info
 
     def render(self, image_size=None, depth=False, camera_name=None):
-
         self._render_callback()
         if camera_name is None:
             camera_name = self.default_camera_name

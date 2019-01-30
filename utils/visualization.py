@@ -4,18 +4,26 @@ from dm_control import mujoco
 
 
 class ViewerWrapper(object):
-    def __init__(self, env, eval_params={'T': 100000}):
+    def __init__(self, env, eval_params={'T': 100000}, saved_episodes=None):
         self.env = env
         self.physics = self.env.physics
         self.T = eval_params['T']
         self.time_count = 0
+        self.saved_episodes = saved_episodes
+        self.replay_cnt = -1
 
     def reset(self):
-        obs = self.env.reset()
+        self.replay_cnt += 1
+        if self.saved_episodes is not None:
+            obs = self.env.reset(restore_info=self.saved_episodes[self.replay_cnt]['restore_info'])
+        else:
+            obs = self.env.reset()
         self.time_count = 0
         return TimeStep(StepType.FIRST, None, None, obs)
 
     def step(self, action):
+        if self.saved_episodes is not None:
+            action = self.saved_episodes[self.replay_cnt]['u'][self.time_count]
         obs, reward, done, info = self.env.step(action)
         if 'time_count' in info:
             self.time_count = info['time_count']
