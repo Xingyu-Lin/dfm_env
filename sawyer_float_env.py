@@ -66,7 +66,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             point_en = self._transform_control(ctrl[2:])
             point_st = np.append(point_st, self.arm_height)
             point_en = np.append(point_en, self.arm_height)
-            self.quivalent_action_taken = self._move_arm_by_endpoints(point_st, point_en)
+            self.equivalent_action_taken = self._move_arm_by_endpoints(point_st, point_en)
             return 'env_no_step'
         elif self.action_type == 'endpoints_visualization':
             if self.prev_action_finished:
@@ -157,14 +157,16 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.set_arm_location(self.init_arm_xpos)
 
         init_arm_qpos = self.init_arm_xpos.squeeze()
-        self.init_qpos_indexes = self.qpos_arm_inds + self.qpos_rope_ref_inds + self.qpos_rope_rot_inds
-        self.init_qpos = np.hstack([init_arm_qpos, init_state_rope_ref, np.zeros(n3)])
+        self.init_qpos_indexes = self.qpos_arm_inds + self.qpos_rope_ref_inds + self.qpos_rope_rot_inds + self.qpos_target_rope_ref_inds + self.qpos_target_rope_rot_inds
+        self.init_qpos = np.hstack(
+            [init_arm_qpos, init_state_rope_ref, np.zeros(n3), init_state_rope_ref, np.zeros(n3)])
 
-        self.init_qvel = np.zeros(len(self.init_qpos_indexes), )
+        self.init_qvel_indexes = list(range(len(self.physics.data.qvel[:])))
+        self.init_qvel = np.zeros(len(self.init_qvel_indexes), )
 
     def _reset_all_to_init_pos(self):
         self.physics.data.qpos[self.init_qpos_indexes] = self.init_qpos
-        self.physics.data.qvel[self.init_qpos_indexes] = self.init_qvel
+        self.physics.data.qvel[self.init_qvel_indexes] = self.init_qvel
         self.physics.forward()
 
     def _sample_rope_init_xpos(self):
@@ -232,11 +234,12 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         return best_pt
 
-    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
+    def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=False):
         # Move the arm from the start loc to the end loc
         # Accelearation: Only do the simulation when the earm intersects the arm
         # Return the quivalent actions taken by the sawyer
         if accelerated:
+            assert False
             arm_st_loc = self._rope_intersection_filter(arm_st_loc, arm_en_loc)
             if arm_st_loc is None:
                 return np.array([0., 0., 0., 0.])

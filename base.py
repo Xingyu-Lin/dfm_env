@@ -266,7 +266,6 @@ class Base(GoalEnv):
             else:
                 obs = self.prev_obs
         else:
-
             ret = self._set_action(action)
             if ret != 'env_no_step':
                 try:
@@ -278,8 +277,8 @@ class Base(GoalEnv):
             obs = self._get_obs()
             if self.use_auxiliary_loss:
                 # transformed_img, transformation = self.random_image_transformation(next_frame)
-                if hasattr(self, 'quivalent_action_taken') and self.quivalent_action_taken is not None:
-                    action_taken = self.quivalent_action_taken
+                if hasattr(self, 'equivalent_action_taken') and self.equivalent_action_taken is not None:
+                    action_taken = self.equivalent_action_taken
                 else:
                     action_taken = action
                 aug_info = {
