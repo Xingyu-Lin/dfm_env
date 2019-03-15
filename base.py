@@ -28,7 +28,7 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera', use_auxiliary_loss=False, **kwargs):
+                 default_camera_name='static_camera', use_auxiliary_loss=False, state_estimation_noise=0., **kwargs):
 
         if model_path.startswith("/"):
             fullpath = model_path
@@ -36,7 +36,7 @@ class Base(GoalEnv):
             fullpath = os.path.join(os.path.dirname(__file__), "./assets", model_path)
         if not path.exists(fullpath):
             raise IOError("File %s does not exist" % fullpath)
-
+        self.state_estimation_noise = state_estimation_noise
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
 
         self.n_actions = n_actions
@@ -122,6 +122,13 @@ class Base(GoalEnv):
             achieved_goal = achieved_goal.reshape([-1, self.goal_dim])
             desired_goal = desired_goal.reshape([-1, self.goal_dim])
             d_threshold = self.distance_threshold_obs
+
+        if self.state_estimation_noise > 0:
+            noise1 = self.state_estimation_noise * np.random.randn(*achieved_goal.shape)  # gaussian noise
+            noise2 = self.state_estimation_noise * np.random.randn(*desired_goal.shape)  # gaussian noise
+            achieved_goal = achieved_goal + noise1
+            desired_goal = desired_goal + noise2
+
         d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
         if self.reward_type == 'sparse':
             return -(d > d_threshold).astype(np.float32)
