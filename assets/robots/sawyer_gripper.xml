@@ -312,7 +312,7 @@
         <jointpos name='j4' joint='arm_j4' />
         <jointpos name='j5' joint='arm_j5' />
         <jointpos name='j6' joint='arm_j6' />
-        <!--<jointpos name='gripper' joint='gripper_jl' />-->
+        <jointpos name='gripper' joint='gripper_jl' />
 
 		<touch name='tl0' site='sensor_tl0' />
 		<touch name='tl1' site='sensor_tl1' />

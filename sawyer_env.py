@@ -14,7 +14,7 @@ class SawyerEnv(Base, gym.utils.EzPickle):
                  n_substeps=20, horizon=200, image_size=400, action_type='mocap',
                  with_goal=False,
                  use_visual_observation=True,
-                 use_image_goal=True,
+                 use_image_goal=False,
                  use_true_reward=False, use_dof='both', fix_gripper=True, **kwargs):
         '''
 

@@ -7,7 +7,7 @@
         <flag warmstart="enable"/>
     </option>
 
-    <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>-->
+{#    <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>-->/#}
     <include file="./dfm_env/assets/scenes/scene.xml"/>
     <include file="./dfm_env/assets/robots/sawyer_floating.xml"/>
 
@@ -15,11 +15,32 @@
     <worldbody>
         <!--<camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />-->
         <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>-->
+
+        <body name="block" pos="-0.15 0 0.72">
+			<joint name="j_block" type="free" damping="0"></joint>
+			<geom  solref='0.01 1' solimp='0.99 0.99 0.01' size="0.01 0.01 0.01" condim="3" type="box" name="object0" material="block_mat" mass="0.001"></geom>
+		</body>
+
+        <!---<body name="block_g1" pos="0.15 0 0.72">
+			<joint name="g1_block" type="free" damping="0" frictionloss="0"></joint>
+			<geom friction='5 5 1' size="0.01 0.01 0.01" condim="3" type="box" name="object1" material="block_mat" mass="0.001"></geom>
+		</body>-->
+
+        <!---<body name="block_g2" pos="0.15 0.1 0.72">
+			<joint name="g2_block" type="free" damping="0" frictionloss="0"></joint>
+			<geom friction='5 5 1' size="0.01 0.01 0.01" condim="3" type="box" name="object2" material="block_mat" mass="0.001"></geom>
+		</body>-->
+
+        <body name="target" pos="0. 0. 0.">
+            <site name="target_site" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
+		</body>
+
         <body name="Rope_B7" pos="-0.25 0.3 0.72">
             <freejoint name="Rope_ref"/>
             <composite prefix='Rope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
-                <joint damping="0.005" kind="main"/>
-                <geom rgba=".8 .2 .1 1" size=".01 .015" type="capsule"/>
+                <!---<joint damping="0.005" kind="main"/>
+                <geom rgba=".8 .2 .1 1" size=".01 .015" type="capsule"/>-->
+               <geom rgba=".8 .2 .1 1" size=".01 .015" type="capsule" mass="0.001"/>
             </composite>
         </body>
 
@@ -27,7 +48,7 @@
             <freejoint name="targetRope_ref"/>
             <composite prefix='targetRope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
-                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2'/>
+                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" solref='0.01 1' solimp='0.99 0.99 0.01' contype='2' conaffinity='2'/>
             </composite>
         </body>
 

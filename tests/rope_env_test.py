@@ -6,11 +6,11 @@ import numpy as np
 def random_policy(time_step=None):
     del time_step  # Unused.
     # print(env.action_spec().minimum,env.action_spec().maximum,env.action_spec().shape)
-    lo = -1 * np.ones((8, 1))
-    hig = 1 * np.ones((8, 1))
+    lo = -1 * np.ones((3, 1))
+    hig = 1 * np.ones((3, 1))
     return np.random.uniform(low=lo,
                              high=hig,
-                             size=(8, 1))
+                             size=(3, 1))
 
 
 if __name__ == '__main__':

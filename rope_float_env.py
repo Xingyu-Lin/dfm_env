@@ -1,11 +1,11 @@
 # Created by Xingyu Lin, 2019/1/8                                                                                  
 from dfm_env.sawyer_float_env import SawyerFloatEnv
 import numpy as np
-from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
+#from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
 
 class RopeFloatEnv(SawyerFloatEnv):
-    def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=False, **kwargs):
+    def __init__(self, distance_threshold=5e-2, goal_push_num=3, visualization_mode=True, **kwargs):
         model_path = 'tasks/rope_float.xml'
         self.goal_push_num = goal_push_num
         self.visualization_mode = visualization_mode
@@ -29,7 +29,7 @@ class RopeFloatEnv(SawyerFloatEnv):
 
         with self.physics.reset_context():
             self._reset_all_to_init_pos()
-            self._random_push_rope(push_num=1)  # Init rope distribution
+            # self._random_push_rope(push_num=1)  # Init rope distribution
             one_push_rope_qpos = self.physics.data.qpos[self.qpos_rope_inds]
             self._random_push_rope(push_num=None)  # Push k times according to the environment
 

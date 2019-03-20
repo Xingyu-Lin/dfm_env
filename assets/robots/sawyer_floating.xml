@@ -46,11 +46,14 @@
         </default>
 
         <default class='gripper_pads'>
-            <geom friction='1 0.005 0.0001' solref='0.01 1' solimp='0.95 0.98 0.001' condim='4' density='100'/>
+            <!--<geom friction='1 0.005 0.0001' solref='0.01 1' solimp='0.95 0.98 0.001' condim='4' density='100'/>-->
+            <geom friction='5 1 1' solref='0.01 1' solimp='0.99 0.99 0.01' condim='4' density='100'/>
         </default>
 
         <default class='takktile_unit'>
-            <geom friction='5 0.003 0.0001' solref='0.008 1' solimp='0.95 0.99 0.0001' condim='6' density='300'
+            <!--<geom friction='5 0.003 0.0001' solref='0.008 1' solimp='0.95 0.99 0.0001' condim='6' density='300'
+                  size='0.003 0.002 0.003' type='box' rgba='0.9 0.9 0.1 1'/>-->
+            <geom friction='1 1 1' solref='0.01 1' solimp='0.99 0.99 0.001' condim='6' density='300'
                   size='0.003 0.002 0.003' type='box' rgba='0.9 0.9 0.1 1'/>
             <site size='0.0035 0.001 0.0035' type='box' rgba='0.9 0.9 0.3 0.2'/>
         </default>
@@ -92,7 +95,7 @@
                           diaginertia='1e-08 1e-08 1e-08'/>
                 <geom size='0.035 0.015' pos='0 0 0.02' type='cylinder'/>
                 <!--  ================= Gripper ================= /-->
-                <body name='arm_gripper_base' pos='0 0 0.025'>
+                <body name='arm_gripper_base' pos='0 0 0.025' quat="1 0 0 1">
                     <inertial pos='0 0 0' quat='-0.5 0.5 0.5 0.5' mass='0.3' diaginertia='3e-08 2e-08 2e-08'/>
                     <geom quat='0 0 0.707107 0.707107' class='viz' mesh='electric_gripper_base'/>
                     <geom size='0.029 0.05' quat='0 0 0.707107 0.707107' type='cylinder'/>
@@ -100,15 +103,22 @@
                         <inertial pos='0 0 0' mass='0.0001' diaginertia='0 0 0' />
                     </body>-->
                     <body name='finger_l' pos='0 -0.0015 0.02'>
-                        <inertial pos='0 0 0' quat='0 0 0 -1' mass='0.02' diaginertia='0.01 0.01 0.01'/>
-                        <!--<joint name='gripper_jl' pos='0 0 0' axis='0 1 0' type='slide' range='0 0.020833' springdamper='0.08 6' limited='true'/>-->
+                        <!--<inertial pos='0 0 0' quat='0 0 0 -1' mass='0.02' diaginertia='0.01 0.01 0.01'/>-->
+
+                        <joint armature="1" damping="50" frictionloss="0.75" stiffness="0" name='gripper_jl' solreflimit="0.006 1" solimplimit="0.99 0.999 0.001" pos='0 0 0' axis='0 1 0' type='slide' range='0 0.020833' springdamper='0.08 6' limited='true'/>
+			            <geom friction='5 5 1' solref='0.01 1' solimp='0.99 0.99 0.01' size="0.01 0.01 0.025" pos='0 0.012 0.095' condim="3" type="box" material="block_mat" mass="0.001"/>
+
+                        <!---<inertial pos='0 0 0' quat='0 0 0 -1' mass='2' diaginertia='0.1 0.1 0.1'/>
+                        <joint armature="1" damping="50" frictionloss="0.1" stiffness="0" name='gripper_jl' solreflimit="0.006 1" solimplimit="0.99 0.999 0.001" pos='0 0 0' axis='0 1 0' type='slide' range='0 0.020833' springdamper='0.08 6' limited='true'/>
                         <geom class='viz' mesh='extended_narrow' euler='1.57 1.57 0' rgba='0.1 0.1 0.1 1'/>
                         <geom size='0.005 0.00675 0.05635' pos='0 0.01725 0.0615' quat='0 0 0 -1' type='box'
                               rgba='0.1 0.1 0.1 1'/>
                         <geom size='0.005 0.025 0.0085' pos='-0.005 -0.003 0.0083' quat='0 0 0 -1' type='box'
                               rgba='0.1 0.1 0.1 1'/>
                         <geom size='0.01 0.005 0.025' pos='0 0.012 0.095' type='box' rgba='0.3 0.3 0.3 0.9'
-                              class='gripper_pads'/>
+                              class='gripper_pads'/>-->
+                        <!--<geom size='0.01 0.005 0.025' pos='0 0.012 0.095' type='box' rgba='0.3 0.3 0.3 0.9'
+                              condim="4" friction="1 0.05 0.01"/>-->
                         <!--  === Sensors === /-->
                         <!--<body name='sensor_array_l' pos='0 0.007 0.1' quat='0 0 0 1' childclass='takktile_unit'>-->
                             <!--<geom pos='0.0045 0.002 -0.016'/>-->
@@ -140,14 +150,27 @@
                         </body>
                         -->
                     </body>
+                    <body name="weld_block" pos="0 0 0.11" euler="0 3.14 3.14">
+                        <geom size="0.001 0.001 0.001" condim="3" type="box" name="weld_block" material="block_mat" mass="0.001"></geom>
+
+                    </body>
+
+
                     <body name='finger_r' pos='0 0.0015 0.02'>
-                        <inertial pos='0 0 0' mass='0.02' diaginertia='0.01 0.01 0.01'/>
+                        <!--<inertial pos='0 0 0' mass='0.02' diaginertia='0.01 0.01 0.01'/>-->
+
+			            <geom friction='5 5 1' solref='0.01 1' solimp='0.99 0.99 0.01' size="0.01 0.01 0.025" pos='0 -0.012 0.095' condim="3" type="box" material="block_mat" mass="0.001"/>
+
+
+                        <!--- OG <inertial pos='0 0 0' mass='2' diaginertia='0.1 0.1 0.1'/>-->
                         <!--<joint name='gripper_jr' pos='0 0 0' axis='0 1 0' type='slide' range='-0.020833 0' springdamper='0.08 6' limited='true'/>-->
-                        <geom class='viz' mesh='extended_narrow' euler='1.57 -1.57 0' rgba='0.1 0.1 0.1 1'/>
+                        <!--OG <geom class='viz' mesh='extended_narrow' euler='1.57 -1.57 0' rgba='0.1 0.1 0.1 1'/>
                         <geom size='0.005 0.00675 0.05635' pos='0 -0.01725 0.0615' type='box' rgba='0.1 0.1 0.1 1'/>
-                        <geom size='0.005 0.025 0.0085' pos='0.005 0.003 0.0083' type='box' rgba='0.1 0.1 0.1 1'/>
-                        <geom size='0.01 0.005 0.025' pos='0 -0.012 0.095' type='box' rgba='0.3 0.3 0.3 0.9'
-                              class='gripper_pads'/>
+                        <geom size='0.005 0.025 0.0085' pos='0.005 0.003 0.0083' type='box' rgba='0.1 0.1 0.1 1'/>-->
+                       <!--<geom size='0.01 0.005 0.025' pos='0 -0.012 0.095' type='box' rgba='0.3 0.3 0.3 0.9'
+                              condim="4" friction="1 0.05 0.01"/>-->
+                        <!-- OG <geom size='0.01 0.005 0.025' pos='0 -0.012 0.095' type='box' rgba='0.3 0.3 0.3 0.9'
+                              class='gripper_pads'/>-->
                         <!--  === Sensors === /-->
                         <!--<body name='sensor_array_r' pos='0 -0.007 0.1' quat='1 0 0 0' childclass='takktile_unit'>-->
                             <!--<geom pos='0.0045 0.002 -0.016'/>-->
@@ -189,13 +212,20 @@
     <!--<joint joint1='gripper_jl' joint2='gripper_jr' polycoef='0 -1 0 0 0' solimp="0.99 0.999 0.001" solref="0.01 1"/>-->
     <!--</equality>-->
 
+    <equality>
+        <weld name="weld0" active="true" solref='0.01 1' solimp='0.99 0.99 0.01' body1="weld_block" body2="finger_l" relpose="0 0 0 0 0 0 0"></weld>
+        <weld name="weld1" active="false" solref='0.01 0.5' solimp='0.99 0.99 0.01 0.1 6' body1="weld_block" body2="block" relpose="0 0 0 0 0 0 -1"></weld>
+        <!---<distance name="weld1" active="false" solref='0.01 0.5' solimp='0.99 0.99 0.01 0.1 6' geom1="weld_block" geom2="object0"></distance>-->
+
+    </equality>
+
     <!--  ================= Actuators ================= /-->
     <actuator>
         <!--  ================= Torque actuators ================= /-->
         <motor ctrllimited='false' joint='arm_slide0' name='tj0'/>
         <motor ctrllimited='false' joint='arm_slide1' name='tj1'/>
         <motor ctrllimited='false' joint='arm_slide2' name='tj2'/>
-        <!--<motor joint='gripper_jl' name='tg0' ctrllimited='false'/>-->
+        <motor joint='gripper_jl' name='tg0' ctrllimited='false'/>
 
         <!--  ================= Position actuators ================= /-->
         <!--<position joint='arm_j0' 	name='pj0' kp='1e5' ctrlrange='-3.0503 3.0503'/>-->

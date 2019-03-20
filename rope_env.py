@@ -1,11 +1,11 @@
 # Created by Xingyu Lin, 2018/12/6
 import numpy as np
 from dfm_env.sawyer_env import SawyerEnv
-from .utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
+from dfm_env.utils.util import get_name_arr_and_len, ignored_physics_warning, cv_render
 
 
 class RopeEnv(SawyerEnv):
-    def __init__(self, distance_threshold=5e-2, fix_gripper=True,
+    def __init__(self, distance_threshold=5e-2, fix_gripper=False,
                  rope_goal_sample_strategy='random_push', **kwargs):
         if fix_gripper:
             model_path = 'tasks/rope_temp.xml'
@@ -273,14 +273,14 @@ class RopeEnv(SawyerEnv):
     #             self.physics.data.qvel[self.init_indexes] = self.init_qvel
 
     def _get_push_block_pos(self):
-        return self.physics.data.qpos[self.state_push_block_inds]
+        return self.physics.data.qpos[self.state_gripper_inds]
 
     def _set_push_block_pos(self, target_pos):
-        self.physics.data.qpos[self.state_push_block_inds] = target_pos
+        self.physics.data.qpos[self.state_gripper_inds] = target_pos
         return
 
     def _set_push_block_vel(self, target_vel):
-        self.physics.data.qvel[self.state_push_block_inds] = target_vel
+        self.physics.data.qvel[self.state_gripper_inds] = target_vel
 
     def _move_push_block(self, start_pt, end_pt, render=False):
         # if render:
