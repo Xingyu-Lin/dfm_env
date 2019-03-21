@@ -163,6 +163,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         list_xpos = get_name_arr_and_len(self.physics.named.data.xpos, 0)[0]
         self.xpos_arm_inds = [idx for idx, s in enumerate(list_xpos) if s == 'arm_l6']
         self.xpos_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
+        self.xpos_finger = [idx for idx, s in enumerate(list_xpos) if 'finger' in s]
+        self.ordered_rope_inds = []
+        for i in range(0, len(self.xpos_rope_inds)):
+            self.ordered_rope_inds.append([idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_') and int(s.split('B')[1]) == i][0])
+
         self.xpos_target_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('targetRope_')]
         #self.xpos_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('block_')]
         #self.xpos_target_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('target_')]
@@ -184,7 +189,11 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         weld_list = get_name_arr_and_len(self.physics.named.model.body_weldid, 0)[0]
         self.weld_block_weld = [idx for idx, s in enumerate(weld_list) if 'weld_block' in s]
-        self.rope_weld = [idx for idx, s in enumerate(weld_list) if s.startswith('Rope_')]
+        self.rope_weld = []
+        for i in range(0, len(self.xpos_rope_inds)):
+            self.rope_weld.append(
+                [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_') and int(s.split('B')[1]) == i][0])
+
         self.block_weld = [idx for idx, s in enumerate(weld_list) if s.startswith('block')]
 
         constr_list = get_name_arr_and_len(self.physics.named.model.eq_obj1id, 0)[0]
@@ -265,6 +274,9 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def get_gripper_state(self):
         return self.physics.data.qpos[self.qpos_gripper_inds]
 
+    def get_finger_location(self):
+        return self.physics.data.xpos[self.xpos_finger]
+
     def weld_rope_offset(self, idx):
         self.physics.model.eq_obj2id[self.active_weld] = self.rope_weld[idx]
         self.physics.model.eq_active[self.active_weld] = 1
@@ -319,8 +331,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         return self.physics.data.qpos[self.qpos_gripblock_right_inds][1] - self.physics.data.qpos[self.qpos_gripblock_left_inds][1]
 
     def get_rope_offset_location(self, i):
-        initLocation = self.get_rope_start_location()
-        offset = self.physics.data.xpos[self.xpos_rope_inds][i]
+        offset = self.physics.data.xpos[self.ordered_rope_inds[i]]
         return offset
 
     def set_rope_offset_location(self, i, pos):
@@ -363,7 +374,38 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
         return best_pt
 
+    def perp(self, a):
+        b = np.empty_like(a)
+        b[0] = -a[1]
+        b[1] = a[0]
+        return b
 
+    def seg_intersect(self, a1, a2, b1, b2):
+        da = a2 - a1
+        db = b2 - b1
+        dp = a1 - b1
+        dap = self.perp(da)
+        denom = np.dot(dap, db)
+        if denom == 0:
+            return None
+        num1 = np.dot(dap, dp)
+        num2 = np.dot(self.perp(db),dp)
+        return (num1 / denom.astype(float)), (num2 / denom.astype(float))
+
+    def get_closest_rope_point(self, l_finger_pos, r_finger_pos):
+
+        finger_seg_1 = l_finger_pos[:2]
+        finger_seg_2 = r_finger_pos[:2]
+        finger_diff = r_finger_pos-l_finger_pos
+        for i in range(0, len(self.ordered_rope_inds)-1):
+            firstRopePos = self.get_rope_offset_location(i)
+            secondRopePos = self.get_rope_offset_location(i+1)
+            rope_diff = secondRopePos - firstRopePos
+            easy_intersect = self.seg_intersect(finger_seg_1, finger_seg_2, firstRopePos[:2], secondRopePos[:2])
+            if easy_intersect is not None:
+                s, t = easy_intersect
+                if 0 <= s <= 1 and 0 <= t <= 1:
+                    return i, t*rope_diff+firstRopePos
 
     def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
         # Move the arm from the start loc to the end loc
@@ -560,8 +602,17 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 self.physics.step()
             cur_dist = self.get_gripper_state() - grip_closed
             if cur_dist < 0:
-                self.weld_rope_offset(3)
+                finger_locs = self.get_finger_location()
+                target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
+                if target_seg is not None:
+                    i, point = target_seg
+                    self.weld_rope_offset(i)
                 self.arm_stage = 2
+                """
+                i, point = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
+                self.weld_rope_offset(i)
+                self.arm_stage = 2
+                """
 
         # Move up
         elif self.arm_stage == 2:
@@ -616,7 +667,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             with ignored_physics_warning():
                 self.physics.step()
             cur_dist = self.get_gripper_state()
-            blockPos = self.get_block_location()
+            blockPos = self.get_rope_offset_location(3)
             if blockPos[2] < 0.72:
                 print("finished action")
                 self.prev_action_finished = True
