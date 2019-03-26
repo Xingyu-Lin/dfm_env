@@ -36,6 +36,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.action_type = action_type
         self.arm_move_velocity = arm_move_velocity
         self.arm_height = arm_height
+        self.targetIdx = 3
 
         if action_type == 'endpoints' or action_type == 'pick_and_place':
             n_actions = 4
@@ -164,6 +165,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         self.xpos_arm_inds = [idx for idx, s in enumerate(list_xpos) if s == 'arm_l6']
         self.xpos_rope_inds = [idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_')]
         self.xpos_finger = [idx for idx, s in enumerate(list_xpos) if 'finger' in s]
+        self.xpos_weld_block = [idx for idx, s in enumerate(list_xpos) if 'weld' in s]
         self.ordered_rope_inds = []
         for i in range(0, len(self.xpos_rope_inds)):
             self.ordered_rope_inds.append([idx for idx, s in enumerate(list_xpos) if s.startswith('Rope_') and int(s.split('B')[1]) == i][0])
@@ -277,15 +279,22 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def get_finger_location(self):
         return self.physics.data.xpos[self.xpos_finger]
 
-    def weld_rope_offset(self, idx):
+    def weld_rope_offset(self, idx, relpos=None):
         self.physics.model.eq_obj2id[self.active_weld] = self.rope_weld[idx]
+        if relpos is not None:
+            self.physics.model.eq_data[self.active_weld[0]][:3] = relpos
         self.physics.model.eq_active[self.active_weld] = 1
 
     def unweld_rope_offset(self):
         self.physics.model.eq_active[self.active_weld] = 0
 
-    def weld_block(self):
+    def get_weld_block_location(self):
+        return self.physics.data.xpos[self.xpos_weld_block[0]]
+
+    def weld_block(self, relpose=None):
         #self.physics.model.eq_obj2id[self.active_weld] = self.block_weld[0]
+        if relpose is not None:
+            self.physics.model.eq_data[self.active_weld[0]][:3] = relpose
         self.physics.model.eq_active[self.active_weld] = 1
 
     def set_gripper_state(self, gripper_state):
@@ -342,6 +351,12 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
 
     def set_rope_offset_force_partial(self, i, j, force):
         self.physics.data.xfrc_applied[self.rope_xfrc[i]][j] = force
+
+    def get_net_rope_vel(self):
+        vels = self.physics.data.qvel[self.qpos_rope_inds]
+        vels = np.abs(vels)
+        print("Rope Vels: {}".format(vels))
+        return np.sum(vels)
 
     def get_arm_xfrc(self):
         return self.physics.data.xfrc_applied[self.arm_xfrc]
@@ -405,7 +420,14 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             if easy_intersect is not None:
                 s, t = easy_intersect
                 if 0 <= s <= 1 and 0 <= t <= 1:
-                    return i, t*rope_diff+firstRopePos
+                    out = i
+                    intersectPt = t*rope_diff+firstRopePos
+                    firstPointDist = np.linalg.norm(firstRopePos[:2]-intersectPt[:2])
+                    secondPointDist = np.linalg.norm(secondRopePos[:2]-intersectPt[:2])
+                    print("Valid intersect at: {} with s: {}, t: {}\n First Dist: {}, second Dist: {}".format(i, s, t, firstPointDist, secondPointDist))
+                    if firstPointDist > secondPointDist:
+                        out = i+1
+                    return out, t*rope_diff+firstRopePos
 
     def _move_arm_by_endpoints(self, arm_st_loc, arm_en_loc, velocity=None, render=False, accelerated=True):
         # Move the arm from the start loc to the end loc
@@ -559,15 +581,18 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             cnt += 1
 
     def _pick_and_place_one_step(self, arm_st_loc, arm_en_loc, velocity=None,
-                                 grip_vel=0.1, grip_closed=0.025, init_height=1.0, grip_force=5):
+                                 grip_vel=0.01, grip_closed=0.017, init_height=1.0, grip_force=5, grip_open = 0.035):
+
         if velocity is None:
             velocity = self.arm_move_velocity
         if self.prev_action_finished:
             self.maxblockheight = 0
-            ropePos = self.get_rope_offset_location(3)
+            ropePos = self.get_rope_offset_location(self.targetIdx)
+            #hovered = [arm_st_loc[0], arm_st_loc[1], init_height]
             hovered = [ropePos[0], ropePos[1]-0.015, init_height]
+            arm_st_loc[2] = ropePos[2]+0.175
             self.set_arm_location(hovered)
-            self.set_gripper_state(0.035)
+            self.set_gripper_state(grip_open)
             move_dist = self.get_point_dist(arm_en_loc, arm_st_loc)
             if move_dist == 0:
                 self.prev_action_finished = True
@@ -578,19 +603,31 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         # Move down
         if self.arm_stage == 0:
             self.move_arm_move_dir = np.asarray([0.0, 0.0, -2.0])
-            self.set_gripper_state(0.03)
+            self.set_gripper_state(grip_open)
             self._set_arm_velocity(velocity * self.move_arm_move_dir)
             with ignored_physics_warning():
                 self.physics.step()
             #cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_st_loc)
             if self.get_arm_location()[2]-0.006 <= arm_st_loc[2]:
                 self.arm_stage = 1
+                finger_locs = self.get_finger_location()
+                target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
+                weld_loc = self.get_weld_block_location()
+                if target_seg is not None:
+                    i, point = target_seg
+                    print("picking up joint: {}".format(i))
+                    offset_loc = self.get_rope_offset_location(i)
+                    relpos = offset_loc - weld_loc
+                    relpos[1] = -relpos[1]
+                    relpos[0] = -relpos[0]
+                    self.weld_rope_offset(i, relpos)
+
             print("grip block loc: {}".format(self.get_grip_block_location()))
             #self.move_arm_prev_dist = cur_dist
         # Close gripper
         elif self.arm_stage == 1:
             self._set_arm_velocity(0)
-            self._set_gripper_force(-grip_force)
+            self._set_gripper_velocity(-grip_vel)
 
             #self.set_grip_block_force(0.001)
             #self._set_gripper_velocity(-grip_vel)
@@ -602,13 +639,20 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 self.physics.step()
             cur_dist = self.get_gripper_state() - grip_closed
             if cur_dist < 0:
-                finger_locs = self.get_finger_location()
-                target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
-                if target_seg is not None:
-                    i, point = target_seg
-                    self.weld_rope_offset(i)
+
                 self.arm_stage = 2
                 """
+                finger_locs = self.get_finger_location()
+                target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
+                weld_loc = self.get_weld_block_location()
+                if target_seg is not None:
+                    i, point = target_seg
+                    offset_loc = self.get_rope_offset_location(i)
+                    relpos = offset_loc - weld_loc
+                    relpos[1] = -relpos[1]
+                    relpos[0] = -relpos[0]
+                    self.weld_rope_offset(i, relpos)
+
                 i, point = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
                 self.weld_rope_offset(i)
                 self.arm_stage = 2
@@ -618,7 +662,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         elif self.arm_stage == 2:
             self.move_arm_move_dir = np.asarray([0.0, 0.0, 0.2])
             self._set_gripper_force(0)
-            self.set_gripper_state(0.02)
+            self.set_gripper_state(grip_closed)
             ropePos = self.get_arm_location()
             new_rope_frc = self.get_arm_xfrc()
             #self.set_rope_offset_force_partial(3, 2, 0.2)
@@ -639,7 +683,7 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         elif self.arm_stage == 3:
             move_dist = self.get_point_dist(arm_en_loc, self.get_arm_location())
             self._set_gripper_force(0)
-            self.set_gripper_state(0.02)
+            self.set_gripper_state(grip_closed)
             blockPos = self.get_arm_location()
             blockPos[2] = blockPos[2] - 0.18
 
@@ -661,22 +705,25 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 self.unweld_rope_offset()
             self.move_arm_prev_dist = cur_dist
         else:
+            print("Rope vel: {}".format(self.get_net_rope_vel()))
+            self._set_arm_velocity([0, 0, 0])
             self._set_gripper_velocity(grip_vel)
-            self.move_arm_move_dir = np.asarray([0.0, 0.0, 0.0])
-            self._set_arm_velocity(velocity * self.move_arm_move_dir)
             with ignored_physics_warning():
                 self.physics.step()
-            cur_dist = self.get_gripper_state()
-            blockPos = self.get_rope_offset_location(3)
-            if blockPos[2] < 0.72:
+            #cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_st_loc)
+            if self.get_net_rope_vel() < 1.5:
                 print("finished action")
                 self.prev_action_finished = True
+                self.targetIdx = 10
+            print("grip block loc: {}".format(self.get_grip_block_location()))
+            #self.move_arm_prev_dist = cur_dist
+
         current_block_pos = self.get_block_location()
 
         self.maxblockheight = max(self.maxblockheight,current_block_pos[2])
-        print("arm state: {}, block forces: {}, block state: {}".format(self.arm_stage,
+        print("arm state: {}, block forces: {}, gripper state: {}".format(self.arm_stage,
                                                                               self.physics.data.qfrc_unc[self.qfrc_block_unc],
-                                                                              self.get_block_location()))
+                                                                              self.get_gripper_state()))
 
 
 
