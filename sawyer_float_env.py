@@ -83,10 +83,12 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         elif self.action_type == 'pick_and_place':
             if self.prev_action_finished:
                 point_st = self._transform_control(ctrl[:2])
-                point_en = self._transform_control(ctrl[2:])
+                point_en = self._transform_control(ctrl[2:4])
+                rot = ctrl[4]
                 self.prev_point_st = np.append(point_st, self.arm_height)
                 self.prev_point_en = np.append(point_en, self.arm_height)
-            self._pick_and_place_by_endpoints(self.prev_point_st, self.prev_point_en)
+                self.prev_rot = rot
+            self._pick_and_place_by_endpoints(self.prev_point_st, self.prev_point_en, self.prev_rot)
         elif self.action_type == 'pick_and_place_visualization':
             if self.prev_action_finished:
                 point_st = self._transform_control(ctrl[:2])
@@ -324,33 +326,6 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
     def set_rope_start_location(self, pos):
         self.physics.data.qpos[self.qpos_rope_ref_inds[0:3]] = pos
 
-    def get_block_location(self):
-        return self.physics.data.qpos[self.qpos_block_inds][0:3]
-
-    def set_block_location(self, pos):
-        self.physics.data.qpos[self.qpos_block_inds[0:3]] = pos
-
-    def get_grip_block_location(self):
-        return self.physics.data.qpos[self.qpos_gripblock_left_inds][0:3]
-
-    def set_grip_block_location(self, loc):
-        self.physics.data.qpos[self.qpos_gripblock_left_inds[0:3]] = loc
-        loc[1] = loc[1]+0.1
-        self.physics.data.qpos[self.qpos_gripblock_right_inds[0:3]] = loc
-
-    def set_grip_block_velocity(self, vel):
-        self.physics.data.qvel[self.qpos_gripblock_left_inds][0:3] = vel
-        self.physics.data.qvel[self.qpos_gripblock_right_inds][0:3] = vel
-
-    def set_grip_block_vel_single(self, vel):
-        self.physics.data.qvel[self.qpos_gripblock_left_inds[1]] = vel
-
-    def set_grip_block_force(self, frc):
-        self.physics.data.qfrc_applied[self.qfrc_actuate_block] = frc
-
-    def get_grip_block_dist(self):
-        return self.physics.data.qpos[self.qpos_gripblock_right_inds][1] - self.physics.data.qpos[self.qpos_gripblock_left_inds][1]
-
     def get_rope_offset_location(self, i):
         offset = self.physics.data.xpos[self.ordered_rope_inds[i]]
         return offset
@@ -486,137 +461,40 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         if velocity is None:
             velocity = self.arm_move_velocity
         self.prev_action_finished = True
+        # initialize the arm
         self._pick_and_place_one_step(arm_st_loc, arm_en_loc, theta, velocity=velocity, render=render,
                                       init_height=init_height, grip_open=grip_open, grip_closed=grip_close)
+        # loop until the rope has been successfully picked up and moved
         while not self.prev_action_finished:
             self._pick_and_place_one_step(arm_st_loc, arm_en_loc, theta, velocity=velocity, render=render,
                                           init_height=init_height, grip_open=grip_open, grip_closed=grip_close)
 
-        """
-        hovered = [arm_st_loc[0], arm_st_loc[1], init_height]
-        self.set_arm_location(hovered)
-        self.set_gripper_state(grip_open)
-        self._set_gripper_velocity(0)
-
-        # lower the arm
-
-        down_dir = np.asarray([0, 0, -1])
-        prev_dist = 10000
-        cnt = 0
-
-        while True:
-            print("down\n")
-            self._set_arm_velocity(down_dir * velocity)
-            if render:
-                img = self.physics.render(camera_id='static_camera')
-                cv_render(img)
-            with ignored_physics_warning():
-                self.physics.step()
-            cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_st_loc)
-            if cur_dist > prev_dist:
-                break
-            prev_dist = cur_dist
-            cnt += 1
-            self.set_gripper_state(grip_open)
-
-
-        # close the gripper
-        # rope diam = 0.01
-        target = grip_close
-        gripper_vel = (target - self.get_gripper_state())
-        prev_dist = 10000
-        cnt = 0
-        while True:
-            print("close: {}, target: {}\n".format(self.get_gripper_state(), target))
-            self._set_gripper_velocity(gripper_vel)
-            if render:
-                img = self.physics.render(camera_id='static_camera')
-                cv_render(img)
-            with ignored_physics_warning():
-                self.physics.step()
-            cur_dist = self.get_gripper_state() - target
-            if self.get_gripper_state() < target:
-                break
-            prev_dist = cur_dist
-            cnt += 1
-
-        # raise arm
-
-        up_dir = np.asarray([0, 0, 1])
-        prev_dist = 10000
-        cnt = 0
-
-        while True:
-            print("up\n")
-            self._set_arm_velocity(up_dir * velocity)
-            if render:
-                img = self.physics.render(camera_id='static_camera')
-                cv_render(img)
-            with ignored_physics_warning():
-                self.physics.step()
-            cur_dist = self._get_endpoints_distance(self.get_arm_location(), hovered)
-            if cur_dist > prev_dist:
-                break
-            prev_dist = cur_dist
-            cnt += 1
-            #self.set_gripper_state(0.020833)
-
-        # move arm
-        move_dist = self.get_point_dist(arm_en_loc, arm_st_loc)
-        if move_dist == 0:
-            return
-        move_dir = (arm_en_loc - arm_st_loc) / move_dist
-        prev_dist = 10000
-        cnt = 0
-
-        while True:
-            print("move\n")
-            self._set_arm_velocity(move_dir * velocity)
-            if render:
-                img = self.physics.render(camera_id='static_camera')
-                cv_render(img)
-            with ignored_physics_warning():
-                self.physics.step()
-            cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_en_loc)
-            if cur_dist > prev_dist:
-                break
-            prev_dist = cur_dist
-            cnt += 1
-            #self.set_gripper_state(0.020833)
-
-        # open gripper
-        target = grip_close
-        gripper_vel = (target - self.get_gripper_state())
-        prev_dist = 10000
-        cnt = 0
-        while True:
-            print("close: {}, target: {}\n".format(self.get_gripper_state(), target))
-            self._set_gripper_velocity(gripper_vel)
-            if render:
-                img = self.physics.render(camera_id='static_camera')
-                cv_render(img)
-            with ignored_physics_warning():
-                self.physics.step()
-            cur_dist = self.get_gripper_state() - target
-            if self.get_gripper_state() < target:
-                break
-            prev_dist = cur_dist
-            cnt += 1
-            """
-
     def _pick_and_place_one_step(self, arm_st_loc, arm_en_loc, theta, velocity=None,
-                                 grip_vel=0.1, grip_closed=0.017, init_height=1.0, grip_force=5,
+                                 grip_vel=0.1, grip_closed=0.017, init_height=1.0,
                                  grip_open = 0.035, render=False):
+        """
+        Function that steps through the process of picking up a rope
+        :param arm_st_loc: Starting location
+        :param arm_en_loc: Ending location
+        :param theta: Rotation of the arm around the z axis
+        :param velocity: speed of the arm
+        :param grip_vel: speed of moving the gripper
+        :param grip_closed: closed position of the gripper
+        :param init_height: initial height of the arm
+        :param grip_open: opened position of the gripper
+        :param render: whether or not to render
+        :return: Nothing
+
+        Due to difficulties with getting mujoco to simulate the proper static friction forces, in order to
+        pick up a rope, we first close the gripper around the rope, and then weld the rope to the gripper.
+        This fixes the position and orientation of the rope relative to the gripper
+        """
 
         if velocity is None:
             velocity = self.arm_move_velocity
         if self.prev_action_finished:
-            self.maxblockheight = 0
-            ropePos = self.get_rope_offset_location(3)
-            #hovered = [arm_st_loc[0], arm_st_loc[1], init_height]
-            hovered = [ropePos[0], ropePos[1]-0.015, init_height]
-            #arm_st_loc[2] = ropePos[2]+0.175
-            rot = sp.Rotation.from_euler('z', theta).as_quat()
+            # initialize arm position
+            hovered = [arm_st_loc[0], arm_st_loc[1], init_height]
             self.set_arm_location(hovered)
             self.set_arm_rotation(theta*np.pi)
             self.set_gripper_state(grip_open)
@@ -632,28 +510,18 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             self.move_arm_move_dir = np.asarray([0.0, 0.0, -2.0])
             self.set_gripper_state(grip_open)
             self._set_arm_velocity(velocity * self.move_arm_move_dir)
-            current_arm_pos = self.get_arm_location()
             with ignored_physics_warning():
                 self.physics.step()
-            cur_dist = self._get_endpoints_distance(self.get_arm_location(), current_arm_pos)
-            print("dist to weld: {}-{}".format(self.get_arm_location()[2], arm_st_loc[2]))
+            #stop when we are within tolerance of the target location
             if self.get_arm_location()[2]-0.01<= arm_st_loc[2]:
                 self.arm_stage = 1
-
-
-            print("grip block loc: {}".format(self.get_grip_block_location()))
-            #self.move_arm_prev_dist = cur_dist
         # Close gripper
         elif self.arm_stage == 1:
             self._set_arm_velocity(0)
             self._set_gripper_velocity(-grip_vel)
 
-            #self.set_grip_block_force(0.001)
-            #self._set_gripper_velocity(-grip_vel)
-            #if self.get_gripper_state() < grip_closed:
-            #    self._set_gripper_velocity(0)
+
             self.move_arm_move_dir = np.asarray([0.0, 0.0, 0.0])
-            #self.set_grip_block_velocity(velocity * self.move_arm_move_dir)
             with ignored_physics_warning():
                 self.physics.step()
             cur_dist = self.get_gripper_state() - grip_closed
@@ -662,67 +530,37 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
                 weld_loc = self.get_weld_block_location()
                 if target_seg is not None:
-                    i, point = target_seg
-                    print("picking up joint: {}".format(i))
-                    offset_loc = self.get_rope_offset_location(i)
-                    relpos = offset_loc - weld_loc
-                    relpos[1] = -relpos[1]
-                    relpos[0] = -relpos[0]
-                    self.weld_rope_offset(i, relpos)
-                self.arm_stage = 2
-                """
-                finger_locs = self.get_finger_location()
-                target_seg = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
-                weld_loc = self.get_weld_block_location()
-                if target_seg is not None:
+                    # if we are in a position to pick up the rope, weld the joint closest to us
                     i, point = target_seg
                     offset_loc = self.get_rope_offset_location(i)
                     relpos = offset_loc - weld_loc
                     relpos[1] = -relpos[1]
                     relpos[0] = -relpos[0]
                     self.weld_rope_offset(i, relpos)
-
-                i, point = self.get_closest_rope_point(finger_locs[0], finger_locs[1])
-                self.weld_rope_offset(i)
                 self.arm_stage = 2
-                """
 
-        # Move up
+
+        # Move up to original height
         elif self.arm_stage == 2:
             self.move_arm_move_dir = np.asarray([0.0, 0.0, 0.2])
             self._set_gripper_force(0)
             self.set_gripper_state(grip_closed)
-            ropePos = self.get_arm_location()
-            new_rope_frc = self.get_arm_xfrc()
-            #self.set_rope_offset_force_partial(3, 2, 0.2)
-            ropePos[2] = ropePos[2] -0.18
-
-            #self.set_rope_offset_location(3, ropePos)
-            #self._set_gripper_velocity(-grip_vel)
-            #if self.get_gripper_state() < grip_closed:
-            #    self._set_gripper_velocity(0)
             self._set_arm_velocity(self.move_arm_move_dir)
             with ignored_physics_warning():
                 self.physics.step()
-            # cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_st_loc)
             if self.get_arm_location()[2] >= init_height:
                 self.arm_stage = 3
-                # self.move_arm_prev_dist = cur_dist
         # Move across
         elif self.arm_stage == 3:
             move_dist = self.get_point_dist(arm_en_loc, self.get_arm_location())
+
             self._set_gripper_force(0)
             self.set_gripper_state(grip_closed)
-            blockPos = self.get_arm_location()
-            blockPos[2] = blockPos[2] - 0.18
 
-            #self.set_rope_start_location(blockPos)
-            #self._set_gripper_velocity(-grip_vel)
-            #if self.get_gripper_state() < grip_closed:
-            #    self._set_gripper_velocity(0)
             if move_dist == 0:
-                self.prev_action_finished = True
+                self.arm_stage = 4
                 return
+
             self.move_arm_move_dir = (arm_en_loc - self.get_arm_location()) / move_dist
             self.move_arm_move_dir[2] = 0
             self._set_arm_velocity(self.arm_move_velocity*self.move_arm_move_dir)
@@ -733,28 +571,19 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
                 self.arm_stage = 4
                 self.unweld_rope_offset()
             self.move_arm_prev_dist = cur_dist
+        # drop rope
         else:
-            print("Rope vel: {}".format(self.get_net_rope_vel()))
             self._set_arm_velocity([0, 0, 0])
             self._set_gripper_velocity(grip_vel)
             with ignored_physics_warning():
                 self.physics.step()
-            #cur_dist = self._get_endpoints_distance(self.get_arm_location(), arm_st_loc)
             if self.get_net_rope_vel() < 1.5:
                 print("finished action")
                 self.prev_action_finished = True
-                #self.targetIdx = 10
-            print("grip block loc: {}".format(self.get_grip_block_location()))
-            #self.move_arm_prev_dist = cur_dist
 
-        current_block_pos = self.get_block_location()
         if render:
             img = self.physics.render(camera_id='static_camera')
             cv_render(img)
-        self.maxblockheight = max(self.maxblockheight,current_block_pos[2])
-        print("arm state: {}, block forces: {}, gripper state: {}".format(self.arm_stage,
-                                                                              self.physics.data.qfrc_unc[self.qfrc_block_unc],
-                                                                              self.get_gripper_state()))
 
 
 
