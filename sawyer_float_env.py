@@ -81,6 +81,8 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
         # print(self.get_arm_location())
         if self.use_visual_observation:
             obs = self.render(depth=False)
+            if self.estimator_path is not None:
+                obs = self.estimate_state(obs_img=obs)
         else:
             # thetas = self.physics.data.qpos[self.state_rope_rot_inds]
             # obs = np.concatenate((self.physics.data.qpos[self.qpos_rope_ref_inds].copy(),
@@ -88,7 +90,10 @@ class SawyerFloatEnv(Base, gym.utils.EzPickle):
             obs = self.physics.data.xpos[self.xpos_rope_inds].copy()
 
         if self.use_image_goal:
-            desired_goal = self.goal_observation
+            if self.estimator_path is not None:
+                desired_goal = self.goal_observation_estimated_state
+            else:
+                desired_goal = self.goal_observation
             achieved_goal = obs
         else:
             desired_goal = self.goal_state

@@ -107,6 +107,8 @@ class RopeFloatEnv(SawyerFloatEnv):
                 self.physics.forward()
                 # self.physics.model.geom_rgba[1, :] = np.asarray([0., 0., 0, 0.])  # Make the goal transparent
                 self.goal_observation = self.render(depth=False)
+                if self.estimator_path is not None:
+                    self.goal_observation_estimated_state = self.estimate_state(goal_img = self.goal_observation)
                 # self.physics.data.qpos[self.qpos_target_rope_ref_inds[1]] -= self.visualization_offset
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = target_original_transparancy
                 self.physics.model.geom_rgba[self.geom_rgba_rope_inds, 3] = 1.

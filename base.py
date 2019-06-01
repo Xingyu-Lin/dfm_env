@@ -15,9 +15,10 @@ from dm_control.suite import common
 from dm_control.mujoco import Physics
 from dm_control.utils import io as resources
 from termcolor import colored
+import pickle
 import cv2 as cv
 import copy
-
+import tensorflow as tf
 
 class Base(GoalEnv):
     '''
@@ -28,7 +29,8 @@ class Base(GoalEnv):
     def __init__(self, model_path, n_substeps, n_actions, horizon, image_size, use_image_goal,
                  use_visual_observation, with_goal,
                  reward_type, distance_threshold, distance_threshold_obs, use_true_reward,
-                 default_camera_name='static_camera', use_auxiliary_loss=False, state_estimation_noise=0., **kwargs):
+                 default_camera_name='static_camera', use_auxiliary_loss=False, state_estimation_reward_noise=0.,
+                 state_estimation_input_noise=0., estimator_path=None, **kwargs):
 
         if model_path.startswith("/"):
             fullpath = model_path
@@ -36,7 +38,11 @@ class Base(GoalEnv):
             fullpath = os.path.join(os.path.dirname(__file__), "./assets", model_path)
         if not path.exists(fullpath):
             raise IOError("File %s does not exist" % fullpath)
-        self.state_estimation_noise = state_estimation_noise
+        self.state_estimation_reward_noise = state_estimation_reward_noise
+        self.state_estimation_input_noise = state_estimation_input_noise
+        self.estimator_path = estimator_path
+        if estimator_path is not None:
+            self.load_estimator(estimator_path)
         self.physics = Physics.from_xml_string(*self.get_model_and_assets(fullpath))
 
         self.n_actions = n_actions
@@ -66,7 +72,7 @@ class Base(GoalEnv):
         # TODO
         # self.init_qpos = self.sim.data.qpos.ravel().copy()
         # self.init_qvel = self.sim.data.qvel.ravel().copy()
-        self.goal_state = self.goal_observation = None
+        self.goal_state = self.goal_observation = self.goal_observation_estimated_state = None
 
         if (not use_visual_observation and distance_threshold == 0. and not use_true_reward) or (
           use_visual_observation and distance_threshold_obs == 0. and not use_true_reward):
@@ -85,6 +91,23 @@ class Base(GoalEnv):
         ))
         self.goal_dim = np.prod(obs['achieved_goal'].shape)
         self.goal_state_dim = np.prod(self.goal_state.shape)
+
+    def load_estimator(self, estimator_file):
+        with open(estimator_file, 'rb') as f:
+            self.estimator = pickle.load(f)
+        # exit()
+
+    def estimate_state(self, obs_img=None, goal_img=None):
+        if obs_img is None:
+            return self.estimator.sess.run([self.estimator.main.q_x_g],
+                                           feed_dict={self.estimator.main.g_tf: goal_img.reshape(1, -1)})[0]
+        if goal_img is None:
+            return self.estimator.sess.run([self.estimator.main.q_x_o],
+                                           feed_dict={self.estimator.main.o_tf: obs_img.reshape(1, -1)})[0]
+        if obs_img is not None and goal_img is not None:
+            return self.estimator.sess.run([self.estimator.main.q_x_o, self.estimator.main.q_x_g],
+                                           feed_dict={self.estimator.main.o_tf: obs_img.reshape(1, -1),
+                                                      self.estimator.main.g_tf: goal_img.reshape(1, -1)})
 
     def read_model(self, model_filename):
 
@@ -123,9 +146,9 @@ class Base(GoalEnv):
             desired_goal = desired_goal.reshape([-1, self.goal_dim])
             d_threshold = self.distance_threshold_obs
 
-        if self.state_estimation_noise > 0:
-            noise1 = self.state_estimation_noise * np.random.randn(*achieved_goal.shape)  # gaussian noise
-            noise2 = self.state_estimation_noise * np.random.randn(*desired_goal.shape)  # gaussian noise
+        if self.state_estimation_reward_noise > 0:
+            noise1 = self.state_estimation_reward_noise * np.random.randn(*achieved_goal.shape)  # gaussian noise
+            noise2 = self.state_estimation_reward_noise * np.random.randn(*desired_goal.shape)  # gaussian noise
             achieved_goal = achieved_goal + noise1
             desired_goal = desired_goal + noise2
 
@@ -304,6 +327,11 @@ class Base(GoalEnv):
         done = False
         if self.time_step >= self.horizon:
             done = True
+
+        noise1 = self.state_estimation_input_noise * np.random.randn(*obs['achieved_goal'].shape)  # gaussian noise
+        noise2 = self.state_estimation_input_noise * np.random.randn(*obs['desired_goal'].shape)  # gaussian noise
+        obs['achieved_goal'] = obs['achieved_goal'] + noise1
+        obs['desired_goal'] = obs['desired_goal'] + noise2
         return obs, reward, done, info
 
     def get_initial_info(self):

@@ -64,6 +64,6 @@ def ignored_physics_warning():
 
 def cv_render(img, name='display'):
     '''Take an image in ndarray format and show it with opencv. '''
-    img = img[:, :, (2, 1, 0)] / 256.
-    cv.imshow(name, img)
+    new_img = img[:, :, (2, 1, 0)] / 256.
+    cv.imshow(name, new_img)
     cv.waitKey(2)
