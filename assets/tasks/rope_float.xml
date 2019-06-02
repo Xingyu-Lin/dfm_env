@@ -7,13 +7,16 @@
         <flag warmstart="enable"/>
     </option>
 
+    <visual>
+        <global offwidth="720" offheight="720"/>
+    </visual>
     <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_shared.xml"/>-->
     <include file="./dfm_env/assets/scenes/scene.xml"/>
     <include file="./dfm_env/assets/robots/sawyer_floating.xml"/>
 
 
     <worldbody>
-        <!--<camera name='static_camera' pos='0.0 -0.75 2.7' euler='0.5 0 0' />-->
+        <camera name='third_person' pos='0.0 -0.75 2.7' euler='0.5 0 0'/>
         <!--<include file="./dfm_env/assets/robots/floatinggripper/floatinggripper_left.xml"/>-->
 
 
@@ -29,14 +32,15 @@
             <freejoint name="targetRope_ref"/>
             <composite prefix='targetRope_' count="15 1 1" offset="0 0 2" spacing="0.04" type="rope">
                 <joint damping="0.005" kind="main"/>
-                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2' material="mat_rope"/>
+                <geom rgba=".8 .2 .1 0.3" size=".01 .015" type="capsule" contype='2' conaffinity='2'
+                      material="mat_rope"/>
             </composite>
         </body>
 
     </worldbody>
     <!--<equality>-->
-        <!--<weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.9 0.95 0.001"-->
-              <!--solref="0.02 1"></weld>-->
+    <!--<weld body1="mocap_body" body2="arm_gripper_base" relpose="0 0 0 1 0 0 0" solimp="0.9 0.95 0.001"-->
+    <!--solref="0.02 1"></weld>-->
     <!--</equality>-->
 
     <actuator>

@@ -21,7 +21,7 @@ class ViewerWrapper(object):
         self.time_count = 0
         return TimeStep(StepType.FIRST, None, None, obs)
 
-    def step(self, action):
+    def step(self, action=None):
         if self.saved_episodes is not None:
             action = self.saved_episodes[self.replay_cnt]['u'][self.time_count]
         obs, reward, done, info = self.env.step(action)

@@ -62,8 +62,8 @@ class RopeFloatEnv(SawyerFloatEnv):
                 self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 0.
 
         num_link = len(self.geom_rgba_rope_inds)
-        self.physics.model.geom_rgba[self.geom_rgba_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
-        self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
+        # self.physics.model.geom_rgba[self.geom_rgba_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
+        # self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, :3] = default_color_map[:num_link, :3] * 0.6
 
     # Rope specific helper functions
     def _sample_rope_init_xpos(self):

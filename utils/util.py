@@ -67,3 +67,18 @@ def cv_render(img, name='display'):
     new_img = img[:, :, (2, 1, 0)] / 256.
     cv.imshow(name, new_img)
     cv.waitKey(2)
+
+
+class CVVideoRecorder(object):
+    def __init__(self, height, width, layer, video_path='/tmp/video.mp4'):
+        self.video_path = video_path
+        self.height = height
+        self.width = width
+        self.layer = layer
+        self.video = cv.VideoWriter(video_path, cv.VideoWriter_fourcc(*'mp4v'), 30.0, (width, height))
+
+    def write(self, frame):
+        self.video.write(frame)
+
+    def close(self):
+        self.video.release()
