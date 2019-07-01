@@ -54,6 +54,7 @@ class RopeFloatEnv(SawyerFloatEnv):
 
         self.visualization_mode = visualization_mode
         super().__init__(model_path=model_path, distance_threshold=distance_threshold, **kwargs)
+        # self.physics.model.geom_rgba[self.geom_rgba_target_rope_inds, 3] = 0.
         if not self.visualization_mode:
             # Hide the arm in case we are not visualizing
             self.physics.model.geom_rgba[self.geom_rgba_arm_inds, 3] = 0

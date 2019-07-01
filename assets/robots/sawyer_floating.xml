@@ -63,8 +63,10 @@
                dir='0 0 -1' castshadow="false"/>
         <!--Tilted view-->
         <!--<camera name='static_camera' pos='0.0 -0.28 2.1' euler='0.3 0 0'/>-->
-        <!--Top down view-->
-        <camera name='static_camera' pos='0.0 0.25 2.1' euler='0. 0 0'/>
+        <!--Top down view, camera v1-->
+<!--        <camera name='static_camera' pos='0.0 0.25 2.1' euler='0. 0 0'/>-->
+        <!--Top down view, camera v2-->
+        <camera name='static_camera' pos='0.0 0.35 1.7' euler='0. 0 0'/>
 
         <!--================= Mocap =================-->
         <!--<body name="mocap_body" pos="0 0 0" mocap="true">-->
